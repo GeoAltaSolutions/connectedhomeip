@@ -408,6 +408,10 @@ JNI_METHOD(jlong, newDeviceController)(JNIEnv * env, jobject self, jobject contr
 #ifdef JAVA_MATTER_CONTROLLER_TEST
         std::unique_ptr<chip::Controller::ExampleOperationalCredentialsIssuer> opCredsIssuer(
             new chip::Controller::ExampleOperationalCredentialsIssuer());
+#if CHIP_DEVICE_LAYER_TARGET_LINUX && CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
+    // By default, Linux device is configured as a BLE peripheral while the controller needs a BLE central.
+    chip::DeviceLayer::Internal::BLEMgrImpl().ConfigureBle(0, /* BLE central */ true);
+#endif
 #else
         std::unique_ptr<chip::Controller::AndroidOperationalCredentialsIssuer> opCredsIssuer(
             new chip::Controller::AndroidOperationalCredentialsIssuer());
