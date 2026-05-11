@@ -536,6 +536,15 @@ static BOOL CommandNeedsTimedInvokeInScenesManagementCluster(AttributeId aAttrib
     }
     }
 }
+static BOOL CommandNeedsTimedInvokeInGroupcastCluster(AttributeId aAttributeId)
+{
+    using namespace Clusters::Groupcast;
+    switch (aAttributeId) {
+    default: {
+        return NO;
+    }
+    }
+}
 static BOOL CommandNeedsTimedInvokeInHEPAFilterMonitoringCluster(AttributeId aAttributeId)
 {
     using namespace Clusters::HepaFilterMonitoring;
@@ -548,6 +557,15 @@ static BOOL CommandNeedsTimedInvokeInHEPAFilterMonitoringCluster(AttributeId aAt
 static BOOL CommandNeedsTimedInvokeInActivatedCarbonFilterMonitoringCluster(AttributeId aAttributeId)
 {
     using namespace Clusters::ActivatedCarbonFilterMonitoring;
+    switch (aAttributeId) {
+    default: {
+        return NO;
+    }
+    }
+}
+static BOOL CommandNeedsTimedInvokeInWaterTankLevelMonitoringCluster(AttributeId aAttributeId)
+{
+    using namespace Clusters::WaterTankLevelMonitoring;
     switch (aAttributeId) {
     default: {
         return NO;
@@ -833,6 +851,15 @@ static BOOL CommandNeedsTimedInvokeInThermostatUserInterfaceConfigurationCluster
     }
     }
 }
+static BOOL CommandNeedsTimedInvokeInHumidistatCluster(AttributeId aAttributeId)
+{
+    using namespace Clusters::Humidistat;
+    switch (aAttributeId) {
+    default: {
+        return NO;
+    }
+    }
+}
 static BOOL CommandNeedsTimedInvokeInColorControlCluster(AttributeId aAttributeId)
 {
     using namespace Clusters::ColorControl;
@@ -845,6 +872,15 @@ static BOOL CommandNeedsTimedInvokeInColorControlCluster(AttributeId aAttributeI
 static BOOL CommandNeedsTimedInvokeInBallastConfigurationCluster(AttributeId aAttributeId)
 {
     using namespace Clusters::BallastConfiguration;
+    switch (aAttributeId) {
+    default: {
+        return NO;
+    }
+    }
+}
+static BOOL CommandNeedsTimedInvokeInDynamicLightingCluster(AttributeId aAttributeId)
+{
+    using namespace Clusters::DynamicLighting;
     switch (aAttributeId) {
     default: {
         return NO;
@@ -999,6 +1035,42 @@ static BOOL CommandNeedsTimedInvokeInSoilMeasurementCluster(AttributeId aAttribu
 {
     using namespace Clusters::SoilMeasurement;
     switch (aAttributeId) {
+    default: {
+        return NO;
+    }
+    }
+}
+static BOOL CommandNeedsTimedInvokeInAmbientContextSensingCluster(AttributeId aAttributeId)
+{
+    using namespace Clusters::AmbientContextSensing;
+    switch (aAttributeId) {
+    default: {
+        return NO;
+    }
+    }
+}
+static BOOL CommandNeedsTimedInvokeInProximityRangingCluster(AttributeId aAttributeId)
+{
+    using namespace Clusters::ProximityRanging;
+    switch (aAttributeId) {
+    default: {
+        return NO;
+    }
+    }
+}
+static BOOL CommandNeedsTimedInvokeInNetworkIdentityManagementCluster(AttributeId aAttributeId)
+{
+    using namespace Clusters::NetworkIdentityManagement;
+    switch (aAttributeId) {
+    case Commands::AddClient::Id: {
+        return YES;
+    }
+    case Commands::RemoveClient::Id: {
+        return YES;
+    }
+    case Commands::ImportAdminSecret::Id: {
+        return YES;
+    }
     default: {
         return NO;
     }
@@ -1164,6 +1236,18 @@ static BOOL CommandNeedsTimedInvokeInContentControlCluster(AttributeId aAttribut
 {
     using namespace Clusters::ContentControl;
     switch (aAttributeId) {
+    case Commands::UpdatePIN::Id: {
+        return YES;
+    }
+    case Commands::ResetPIN::Id: {
+        return YES;
+    }
+    case Commands::Enable::Id: {
+        return YES;
+    }
+    case Commands::Disable::Id: {
+        return YES;
+    }
     default: {
         return NO;
     }
@@ -1521,11 +1605,17 @@ BOOL MTRCommandNeedsTimedInvoke(NSNumber * _Nonnull aClusterID, NSNumber * _Nonn
     case Clusters::ScenesManagement::Id: {
         return CommandNeedsTimedInvokeInScenesManagementCluster(commandID);
     }
+    case Clusters::Groupcast::Id: {
+        return CommandNeedsTimedInvokeInGroupcastCluster(commandID);
+    }
     case Clusters::HepaFilterMonitoring::Id: {
         return CommandNeedsTimedInvokeInHEPAFilterMonitoringCluster(commandID);
     }
     case Clusters::ActivatedCarbonFilterMonitoring::Id: {
         return CommandNeedsTimedInvokeInActivatedCarbonFilterMonitoringCluster(commandID);
+    }
+    case Clusters::WaterTankLevelMonitoring::Id: {
+        return CommandNeedsTimedInvokeInWaterTankLevelMonitoringCluster(commandID);
     }
     case Clusters::BooleanStateConfiguration::Id: {
         return CommandNeedsTimedInvokeInBooleanStateConfigurationCluster(commandID);
@@ -1599,11 +1689,17 @@ BOOL MTRCommandNeedsTimedInvoke(NSNumber * _Nonnull aClusterID, NSNumber * _Nonn
     case Clusters::ThermostatUserInterfaceConfiguration::Id: {
         return CommandNeedsTimedInvokeInThermostatUserInterfaceConfigurationCluster(commandID);
     }
+    case Clusters::Humidistat::Id: {
+        return CommandNeedsTimedInvokeInHumidistatCluster(commandID);
+    }
     case Clusters::ColorControl::Id: {
         return CommandNeedsTimedInvokeInColorControlCluster(commandID);
     }
     case Clusters::BallastConfiguration::Id: {
         return CommandNeedsTimedInvokeInBallastConfigurationCluster(commandID);
+    }
+    case Clusters::DynamicLighting::Id: {
+        return CommandNeedsTimedInvokeInDynamicLightingCluster(commandID);
     }
     case Clusters::IlluminanceMeasurement::Id: {
         return CommandNeedsTimedInvokeInIlluminanceMeasurementCluster(commandID);
@@ -1655,6 +1751,15 @@ BOOL MTRCommandNeedsTimedInvoke(NSNumber * _Nonnull aClusterID, NSNumber * _Nonn
     }
     case Clusters::SoilMeasurement::Id: {
         return CommandNeedsTimedInvokeInSoilMeasurementCluster(commandID);
+    }
+    case Clusters::AmbientContextSensing::Id: {
+        return CommandNeedsTimedInvokeInAmbientContextSensingCluster(commandID);
+    }
+    case Clusters::ProximityRanging::Id: {
+        return CommandNeedsTimedInvokeInProximityRangingCluster(commandID);
+    }
+    case Clusters::NetworkIdentityManagement::Id: {
+        return CommandNeedsTimedInvokeInNetworkIdentityManagementCluster(commandID);
     }
     case Clusters::WiFiNetworkManagement::Id: {
         return CommandNeedsTimedInvokeInWiFiNetworkManagementCluster(commandID);

@@ -433,7 +433,7 @@ TEST_F(TestPushAVStreamTransportStorage, TestTransportOptionsStorage)
     transportOptions.streamUsage = StreamUsageEnum::kAnalysis;
     transportOptions.videoStreamID.SetValue(1);
     transportOptions.audioStreamID.SetValue(2);
-    transportOptions.endpointID       = 1;
+    transportOptions.TLSEndpointID    = 1;
     std::string url                   = "rtsp://192.168.1.100:554/stream";
     transportOptions.url              = Span(url.data(), url.size());
     transportOptions.triggerOptions   = triggerOptions;
@@ -448,7 +448,7 @@ TEST_F(TestPushAVStreamTransportStorage, TestTransportOptionsStorage)
     EXPECT_EQ(transportOptionsStorage.streamUsage, StreamUsageEnum::kAnalysis);
     EXPECT_EQ(transportOptionsStorage.videoStreamID.Value(), (uint16_t) 1);
     EXPECT_EQ(transportOptionsStorage.audioStreamID.Value(), (uint16_t) 2);
-    EXPECT_EQ(transportOptionsStorage.endpointID, 1);
+    EXPECT_EQ(transportOptionsStorage.TLSEndpointID, 1);
 
     std::string transportOptionsUrlStr(transportOptionsStorage.url.data(), transportOptionsStorage.url.size());
     EXPECT_EQ(transportOptionsUrlStr, "rtsp://192.168.1.100:554/stream");
@@ -458,7 +458,7 @@ TEST_F(TestPushAVStreamTransportStorage, TestTransportOptionsStorage)
     EXPECT_EQ(transportOptionsStorageCopy.streamUsage, StreamUsageEnum::kAnalysis);
     EXPECT_EQ(transportOptionsStorageCopy.videoStreamID.Value(), (uint16_t) 1);
     EXPECT_EQ(transportOptionsStorageCopy.audioStreamID.Value(), (uint16_t) 2);
-    EXPECT_EQ(transportOptionsStorageCopy.endpointID, 1);
+    EXPECT_EQ(transportOptionsStorageCopy.TLSEndpointID, 1);
 
     std::string transportOptionsUrlStrCopy(transportOptionsStorageCopy.url.data(), transportOptionsStorageCopy.url.size());
     EXPECT_EQ(transportOptionsUrlStrCopy, "rtsp://192.168.1.100:554/stream");
@@ -470,7 +470,7 @@ TEST_F(TestPushAVStreamTransportStorage, TestTransportOptionsStorage)
     EXPECT_EQ(BaseTransportOptions.streamUsage, StreamUsageEnum::kAnalysis);
     EXPECT_EQ(BaseTransportOptions.videoStreamID.Value(), (uint16_t) 1);
     EXPECT_EQ(BaseTransportOptions.audioStreamID.Value(), (uint16_t) 2);
-    EXPECT_EQ(BaseTransportOptions.endpointID, 1);
+    EXPECT_EQ(BaseTransportOptions.TLSEndpointID, 1);
 
     std::string transportOptionsUrlStrBase(BaseTransportOptions.url.data(), BaseTransportOptions.url.size());
     EXPECT_EQ(transportOptionsUrlStrBase, "rtsp://192.168.1.100:554/stream");
@@ -565,7 +565,7 @@ TEST_F(TestPushAVStreamTransportStorage, TestTransportConfigurationStorage)
     transportOptions.streamUsage = StreamUsageEnum::kAnalysis;
     transportOptions.videoStreamID.SetValue(1);
     transportOptions.audioStreamID.SetValue(2);
-    transportOptions.endpointID       = 1;
+    transportOptions.TLSEndpointID    = 1;
     std::string url                   = "rtsp://192.168.1.100:554/stream";
     transportOptions.url              = Span(url.data(), url.size());
     transportOptions.triggerOptions   = triggerOptions;
@@ -586,7 +586,7 @@ TEST_F(TestPushAVStreamTransportStorage, TestTransportConfigurationStorage)
     EXPECT_EQ(transportConfigurationStorage.transportOptions.Value().streamUsage, StreamUsageEnum::kAnalysis);
     EXPECT_EQ(transportConfigurationStorage.transportOptions.Value().videoStreamID.Value(), (uint16_t) 1);
     EXPECT_EQ(transportConfigurationStorage.transportOptions.Value().audioStreamID.Value(), (uint16_t) 2);
-    EXPECT_EQ(transportConfigurationStorage.transportOptions.Value().endpointID, 1);
+    EXPECT_EQ(transportConfigurationStorage.transportOptions.Value().TLSEndpointID, 1);
 
     std::string transportOptionsUrlStrConfiguration(transportConfigurationStorage.transportOptions.Value().url.data(),
                                                     transportConfigurationStorage.transportOptions.Value().url.size());
@@ -599,7 +599,7 @@ TEST_F(TestPushAVStreamTransportStorage, TestTransportConfigurationStorage)
     EXPECT_EQ(transportConfigurationStorageCopy.transportOptions.Value().streamUsage, StreamUsageEnum::kAnalysis);
     EXPECT_EQ(transportConfigurationStorageCopy.transportOptions.Value().videoStreamID.Value(), (uint16_t) 1);
     EXPECT_EQ(transportConfigurationStorageCopy.transportOptions.Value().audioStreamID.Value(), (uint16_t) 2);
-    EXPECT_EQ(transportConfigurationStorageCopy.transportOptions.Value().endpointID, 1);
+    EXPECT_EQ(transportConfigurationStorageCopy.transportOptions.Value().TLSEndpointID, 1);
 
     std::string transportOptionsUrlStrConfigurationCopy(transportConfigurationStorageCopy.transportOptions.Value().url.data(),
                                                         transportConfigurationStorageCopy.transportOptions.Value().url.size());
@@ -615,7 +615,7 @@ TEST_F(TestPushAVStreamTransportStorage, TestTransportConfigurationStorage)
     EXPECT_EQ(BaseTransportConfiguration.transportOptions.Value().streamUsage, StreamUsageEnum::kAnalysis);
     EXPECT_EQ(BaseTransportConfiguration.transportOptions.Value().videoStreamID.Value(), (uint16_t) 1);
     EXPECT_EQ(BaseTransportConfiguration.transportOptions.Value().audioStreamID.Value(), (uint16_t) 2);
-    EXPECT_EQ(BaseTransportConfiguration.transportOptions.Value().endpointID, 1);
+    EXPECT_EQ(BaseTransportConfiguration.transportOptions.Value().TLSEndpointID, 1);
 
     std::string transportOptionsUrlStrConfigurationBase(BaseTransportConfiguration.transportOptions.Value().url.data(),
                                                         BaseTransportConfiguration.transportOptions.Value().url.size());
@@ -630,6 +630,232 @@ TEST_F(TestPushAVStreamTransportStorage, TestTransportConfigurationStorage)
     EXPECT_EQ(transportConfigurationStorageNull.connectionID, 1);
     EXPECT_EQ(transportConfigurationStorageNull.transportStatus, TransportStatusEnum::kInactive);
     EXPECT_FALSE(transportConfigurationStorageNull.transportOptions.HasValue());
+}
+
+TEST_F(TestPushAVStreamTransportStorage, TestVideoStreamDeepCopy)
+{
+    // Test that video stream names are deep copied into flat buffer
+    TransportOptionsStorage transportOptionsStorage;
+
+    // Create video streams with names
+    Structs::VideoStreamStruct::Type videoStream1;
+    std::string videoName1       = "FrontDoor";
+    videoStream1.videoStreamID   = 1;
+    videoStream1.videoStreamName = CharSpan(videoName1.data(), videoName1.size());
+
+    Structs::VideoStreamStruct::Type videoStream2;
+    std::string videoName2       = "BackYard";
+    videoStream2.videoStreamID   = 2;
+    videoStream2.videoStreamName = CharSpan(videoName2.data(), videoName2.size());
+
+    // Add video streams
+    transportOptionsStorage.AddVideoStream(videoStream1);
+    transportOptionsStorage.AddVideoStream(videoStream2);
+
+    // Clear original strings to verify deep copy
+    videoName1.clear();
+    videoName2.clear();
+
+    // Verify video streams are stored correctly
+    EXPECT_TRUE(transportOptionsStorage.videoStreams.HasValue());
+    DataModel::List<const Structs::VideoStreamStruct::Type> videoList = transportOptionsStorage.videoStreams.Value();
+    EXPECT_EQ(videoList.size(), (size_t) 2);
+
+    // Verify first video stream
+    std::string storedName1(videoList[0].videoStreamName.data(), videoList[0].videoStreamName.size());
+    EXPECT_EQ(storedName1, "FrontDoor");
+    EXPECT_EQ(videoList[0].videoStreamID, (uint16_t) 1);
+
+    // Verify second video stream
+    std::string storedName2(videoList[1].videoStreamName.data(), videoList[1].videoStreamName.size());
+    EXPECT_EQ(storedName2, "BackYard");
+    EXPECT_EQ(videoList[1].videoStreamID, (uint16_t) 2);
+}
+
+TEST_F(TestPushAVStreamTransportStorage, TestAudioStreamDeepCopy)
+{
+    // Test that audio stream names are deep copied into flat buffer
+    TransportOptionsStorage transportOptionsStorage;
+
+    // Create audio streams with names
+    Structs::AudioStreamStruct::Type audioStream1;
+    std::string audioName1       = "Mic1";
+    audioStream1.audioStreamID   = 1;
+    audioStream1.audioStreamName = CharSpan(audioName1.data(), audioName1.size());
+
+    Structs::AudioStreamStruct::Type audioStream2;
+    std::string audioName2       = "Mic2";
+    audioStream2.audioStreamID   = 2;
+    audioStream2.audioStreamName = CharSpan(audioName2.data(), audioName2.size());
+
+    // Add audio streams
+    transportOptionsStorage.AddAudioStream(audioStream1);
+    transportOptionsStorage.AddAudioStream(audioStream2);
+
+    // Clear original strings to verify deep copy
+    audioName1.clear();
+    audioName2.clear();
+
+    // Verify audio streams are stored correctly
+    EXPECT_TRUE(transportOptionsStorage.audioStreams.HasValue());
+    DataModel::List<const Structs::AudioStreamStruct::Type> audioList = transportOptionsStorage.audioStreams.Value();
+    EXPECT_EQ(audioList.size(), (size_t) 2);
+
+    // Verify first audio stream
+    std::string storedName1(audioList[0].audioStreamName.data(), audioList[0].audioStreamName.size());
+    EXPECT_EQ(storedName1, "Mic1");
+    EXPECT_EQ(audioList[0].audioStreamID, (uint16_t) 1);
+
+    // Verify second audio stream
+    std::string storedName2(audioList[1].audioStreamName.data(), audioList[1].audioStreamName.size());
+    EXPECT_EQ(storedName2, "Mic2");
+    EXPECT_EQ(audioList[1].audioStreamID, (uint16_t) 2);
+}
+
+TEST_F(TestPushAVStreamTransportStorage, TestClearVideoStreams)
+{
+    TransportOptionsStorage transportOptionsStorage;
+
+    // Add a video stream
+    Structs::VideoStreamStruct::Type videoStream;
+    std::string videoName       = "TestStream";
+    videoStream.videoStreamID   = 1;
+    videoStream.videoStreamName = CharSpan(videoName.data(), videoName.size());
+    transportOptionsStorage.AddVideoStream(videoStream);
+
+    // Verify it was added
+    EXPECT_TRUE(transportOptionsStorage.videoStreams.HasValue());
+    EXPECT_EQ(transportOptionsStorage.videoStreams.Value().size(), (size_t) 1);
+
+    // Clear video streams
+    transportOptionsStorage.ClearVideoStreams();
+
+    // Verify it was cleared
+    EXPECT_FALSE(transportOptionsStorage.videoStreams.HasValue());
+}
+
+TEST_F(TestPushAVStreamTransportStorage, TestClearAudioStreams)
+{
+    TransportOptionsStorage transportOptionsStorage;
+
+    // Add an audio stream
+    Structs::AudioStreamStruct::Type audioStream;
+    std::string audioName       = "TestAudio";
+    audioStream.audioStreamID   = 1;
+    audioStream.audioStreamName = CharSpan(audioName.data(), audioName.size());
+    transportOptionsStorage.AddAudioStream(audioStream);
+
+    // Verify it was added
+    EXPECT_TRUE(transportOptionsStorage.audioStreams.HasValue());
+    EXPECT_EQ(transportOptionsStorage.audioStreams.Value().size(), (size_t) 1);
+
+    // Clear audio streams
+    transportOptionsStorage.ClearAudioStreams();
+
+    // Verify it was cleared
+    EXPECT_FALSE(transportOptionsStorage.audioStreams.HasValue());
+}
+
+TEST_F(TestPushAVStreamTransportStorage, TestUpdateVideoStreamsList)
+{
+    TransportOptionsStorage transportOptionsStorage;
+
+    // Initially no video streams
+    EXPECT_FALSE(transportOptionsStorage.videoStreams.HasValue());
+
+    // Update should keep it cleared
+    transportOptionsStorage.UpdateVideoStreamsList();
+    EXPECT_FALSE(transportOptionsStorage.videoStreams.HasValue());
+
+    // Add a video stream
+    Structs::VideoStreamStruct::Type videoStream;
+    std::string videoName       = "Stream1";
+    videoStream.videoStreamID   = 1;
+    videoStream.videoStreamName = CharSpan(videoName.data(), videoName.size());
+    transportOptionsStorage.AddVideoStream(videoStream);
+
+    // Verify list is updated
+    EXPECT_TRUE(transportOptionsStorage.videoStreams.HasValue());
+    EXPECT_EQ(transportOptionsStorage.videoStreams.Value().size(), (size_t) 1);
+}
+
+TEST_F(TestPushAVStreamTransportStorage, TestUpdateAudioStreamsList)
+{
+    TransportOptionsStorage transportOptionsStorage;
+
+    // Initially no audio streams
+    EXPECT_FALSE(transportOptionsStorage.audioStreams.HasValue());
+
+    // Update should keep it cleared
+    transportOptionsStorage.UpdateAudioStreamsList();
+    EXPECT_FALSE(transportOptionsStorage.audioStreams.HasValue());
+
+    // Add an audio stream
+    Structs::AudioStreamStruct::Type audioStream;
+    std::string audioName       = "Audio1";
+    audioStream.audioStreamID   = 1;
+    audioStream.audioStreamName = CharSpan(audioName.data(), audioName.size());
+    transportOptionsStorage.AddAudioStream(audioStream);
+
+    // Verify list is updated
+    EXPECT_TRUE(transportOptionsStorage.audioStreams.HasValue());
+    EXPECT_EQ(transportOptionsStorage.audioStreams.Value().size(), (size_t) 1);
+}
+
+TEST_F(TestPushAVStreamTransportStorage, TestMultipleVideoStreamNamesNoCorruption)
+{
+    // Test that multiple video streams with different names don't corrupt each other
+    TransportOptionsStorage transportOptionsStorage;
+
+    // Add multiple video streams with different names
+    for (int i = 0; i < 5; i++)
+    {
+        Structs::VideoStreamStruct::Type videoStream;
+        std::string name            = "VideoStream" + std::to_string(i);
+        videoStream.videoStreamID   = static_cast<uint16_t>(i);
+        videoStream.videoStreamName = CharSpan(name.data(), name.size());
+        transportOptionsStorage.AddVideoStream(videoStream);
+    }
+
+    // Verify all streams are stored correctly without corruption
+    DataModel::List<const Structs::VideoStreamStruct::Type> videoList = transportOptionsStorage.videoStreams.Value();
+    EXPECT_EQ(videoList.size(), (size_t) 5);
+
+    for (size_t i = 0; i < 5; i++)
+    {
+        std::string expectedName = "VideoStream" + std::to_string(i);
+        std::string storedName(videoList[i].videoStreamName.data(), videoList[i].videoStreamName.size());
+        EXPECT_EQ(storedName, expectedName);
+        EXPECT_EQ(videoList[i].videoStreamID, static_cast<uint16_t>(i));
+    }
+}
+
+TEST_F(TestPushAVStreamTransportStorage, TestMultipleAudioStreamNamesNoCorruption)
+{
+    // Test that multiple audio streams with different names don't corrupt each other
+    TransportOptionsStorage transportOptionsStorage;
+
+    // Add multiple audio streams with different names
+    for (int i = 0; i < 5; i++)
+    {
+        Structs::AudioStreamStruct::Type audioStream;
+        std::string name            = "AudioStream" + std::to_string(i);
+        audioStream.audioStreamID   = static_cast<uint16_t>(i);
+        audioStream.audioStreamName = CharSpan(name.data(), name.size());
+        transportOptionsStorage.AddAudioStream(audioStream);
+    }
+
+    // Verify all streams are stored correctly without corruption
+    DataModel::List<const Structs::AudioStreamStruct::Type> audioList = transportOptionsStorage.audioStreams.Value();
+    EXPECT_EQ(audioList.size(), (size_t) 5);
+
+    for (size_t i = 0; i < 5; i++)
+    {
+        std::string expectedName = "AudioStream" + std::to_string(i);
+        std::string storedName(audioList[i].audioStreamName.data(), audioList[i].audioStreamName.size());
+        EXPECT_EQ(storedName, expectedName);
+        EXPECT_EQ(audioList[i].audioStreamID, static_cast<uint16_t>(i));
+    }
 }
 
 } // namespace PushAvStreamTransport

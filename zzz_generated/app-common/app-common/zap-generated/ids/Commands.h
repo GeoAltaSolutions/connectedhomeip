@@ -26,6 +26,7 @@
 #include <clusters/ActivatedCarbonFilterMonitoring/CommandIds.h>
 #include <clusters/AdministratorCommissioning/CommandIds.h>
 #include <clusters/AirQuality/CommandIds.h>
+#include <clusters/AmbientContextSensing/CommandIds.h>
 #include <clusters/ApplicationBasic/CommandIds.h>
 #include <clusters/ApplicationLauncher/CommandIds.h>
 #include <clusters/AudioOutput/CommandIds.h>
@@ -58,6 +59,7 @@
 #include <clusters/DishwasherAlarm/CommandIds.h>
 #include <clusters/DishwasherMode/CommandIds.h>
 #include <clusters/DoorLock/CommandIds.h>
+#include <clusters/DynamicLighting/CommandIds.h>
 #include <clusters/EcosystemInformation/CommandIds.h>
 #include <clusters/ElectricalEnergyMeasurement/CommandIds.h>
 #include <clusters/ElectricalGridConditions/CommandIds.h>
@@ -74,8 +76,10 @@
 #include <clusters/GeneralCommissioning/CommandIds.h>
 #include <clusters/GeneralDiagnostics/CommandIds.h>
 #include <clusters/GroupKeyManagement/CommandIds.h>
+#include <clusters/Groupcast/CommandIds.h>
 #include <clusters/Groups/CommandIds.h>
 #include <clusters/HepaFilterMonitoring/CommandIds.h>
+#include <clusters/Humidistat/CommandIds.h>
 #include <clusters/IcdManagement/CommandIds.h>
 #include <clusters/Identify/CommandIds.h>
 #include <clusters/IlluminanceMeasurement/CommandIds.h>
@@ -96,6 +100,7 @@
 #include <clusters/MicrowaveOvenMode/CommandIds.h>
 #include <clusters/ModeSelect/CommandIds.h>
 #include <clusters/NetworkCommissioning/CommandIds.h>
+#include <clusters/NetworkIdentityManagement/CommandIds.h>
 #include <clusters/NitrogenDioxideConcentrationMeasurement/CommandIds.h>
 #include <clusters/OccupancySensing/CommandIds.h>
 #include <clusters/OnOff/CommandIds.h>
@@ -113,6 +118,7 @@
 #include <clusters/PowerSourceConfiguration/CommandIds.h>
 #include <clusters/PowerTopology/CommandIds.h>
 #include <clusters/PressureMeasurement/CommandIds.h>
+#include <clusters/ProximityRanging/CommandIds.h>
 #include <clusters/ProxyConfiguration/CommandIds.h>
 #include <clusters/ProxyDiscovery/CommandIds.h>
 #include <clusters/ProxyValid/CommandIds.h>
@@ -154,6 +160,7 @@
 #include <clusters/WakeOnLan/CommandIds.h>
 #include <clusters/WaterHeaterManagement/CommandIds.h>
 #include <clusters/WaterHeaterMode/CommandIds.h>
+#include <clusters/WaterTankLevelMonitoring/CommandIds.h>
 #include <clusters/WebRTCTransportProvider/CommandIds.h>
 #include <clusters/WebRTCTransportRequestor/CommandIds.h>
 #include <clusters/WiFiNetworkDiagnostics/CommandIds.h>

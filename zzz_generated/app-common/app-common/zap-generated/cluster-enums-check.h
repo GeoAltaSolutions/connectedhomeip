@@ -28,6 +28,7 @@
 #include <clusters/ActivatedCarbonFilterMonitoring/EnumsCheck.h>
 #include <clusters/AdministratorCommissioning/EnumsCheck.h>
 #include <clusters/AirQuality/EnumsCheck.h>
+#include <clusters/AmbientContextSensing/EnumsCheck.h>
 #include <clusters/ApplicationBasic/EnumsCheck.h>
 #include <clusters/ApplicationLauncher/EnumsCheck.h>
 #include <clusters/AudioOutput/EnumsCheck.h>
@@ -60,6 +61,7 @@
 #include <clusters/DishwasherAlarm/EnumsCheck.h>
 #include <clusters/DishwasherMode/EnumsCheck.h>
 #include <clusters/DoorLock/EnumsCheck.h>
+#include <clusters/DynamicLighting/EnumsCheck.h>
 #include <clusters/EcosystemInformation/EnumsCheck.h>
 #include <clusters/ElectricalEnergyMeasurement/EnumsCheck.h>
 #include <clusters/ElectricalGridConditions/EnumsCheck.h>
@@ -76,8 +78,10 @@
 #include <clusters/GeneralCommissioning/EnumsCheck.h>
 #include <clusters/GeneralDiagnostics/EnumsCheck.h>
 #include <clusters/GroupKeyManagement/EnumsCheck.h>
+#include <clusters/Groupcast/EnumsCheck.h>
 #include <clusters/Groups/EnumsCheck.h>
 #include <clusters/HepaFilterMonitoring/EnumsCheck.h>
+#include <clusters/Humidistat/EnumsCheck.h>
 #include <clusters/IcdManagement/EnumsCheck.h>
 #include <clusters/Identify/EnumsCheck.h>
 #include <clusters/IlluminanceMeasurement/EnumsCheck.h>
@@ -98,6 +102,7 @@
 #include <clusters/MicrowaveOvenMode/EnumsCheck.h>
 #include <clusters/ModeSelect/EnumsCheck.h>
 #include <clusters/NetworkCommissioning/EnumsCheck.h>
+#include <clusters/NetworkIdentityManagement/EnumsCheck.h>
 #include <clusters/NitrogenDioxideConcentrationMeasurement/EnumsCheck.h>
 #include <clusters/OccupancySensing/EnumsCheck.h>
 #include <clusters/OnOff/EnumsCheck.h>
@@ -115,6 +120,7 @@
 #include <clusters/PowerSourceConfiguration/EnumsCheck.h>
 #include <clusters/PowerTopology/EnumsCheck.h>
 #include <clusters/PressureMeasurement/EnumsCheck.h>
+#include <clusters/ProximityRanging/EnumsCheck.h>
 #include <clusters/ProxyConfiguration/EnumsCheck.h>
 #include <clusters/ProxyDiscovery/EnumsCheck.h>
 #include <clusters/ProxyValid/EnumsCheck.h>
@@ -156,6 +162,7 @@
 #include <clusters/WakeOnLan/EnumsCheck.h>
 #include <clusters/WaterHeaterManagement/EnumsCheck.h>
 #include <clusters/WaterHeaterMode/EnumsCheck.h>
+#include <clusters/WaterTankLevelMonitoring/EnumsCheck.h>
 #include <clusters/WebRTCTransportProvider/EnumsCheck.h>
 #include <clusters/WebRTCTransportRequestor/EnumsCheck.h>
 #include <clusters/WiFiNetworkDiagnostics/EnumsCheck.h>

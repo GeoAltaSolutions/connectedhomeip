@@ -47,6 +47,10 @@
 #include <clusters/AirQuality/Commands.h>
 #include <clusters/AirQuality/Events.h>
 #include <clusters/AirQuality/Structs.h>
+#include <clusters/AmbientContextSensing/Attributes.h>
+#include <clusters/AmbientContextSensing/Commands.h>
+#include <clusters/AmbientContextSensing/Events.h>
+#include <clusters/AmbientContextSensing/Structs.h>
 #include <clusters/ApplicationBasic/Attributes.h>
 #include <clusters/ApplicationBasic/Commands.h>
 #include <clusters/ApplicationBasic/Events.h>
@@ -175,6 +179,10 @@
 #include <clusters/DoorLock/Commands.h>
 #include <clusters/DoorLock/Events.h>
 #include <clusters/DoorLock/Structs.h>
+#include <clusters/DynamicLighting/Attributes.h>
+#include <clusters/DynamicLighting/Commands.h>
+#include <clusters/DynamicLighting/Events.h>
+#include <clusters/DynamicLighting/Structs.h>
 #include <clusters/EcosystemInformation/Attributes.h>
 #include <clusters/EcosystemInformation/Commands.h>
 #include <clusters/EcosystemInformation/Events.h>
@@ -239,6 +247,10 @@
 #include <clusters/GroupKeyManagement/Commands.h>
 #include <clusters/GroupKeyManagement/Events.h>
 #include <clusters/GroupKeyManagement/Structs.h>
+#include <clusters/Groupcast/Attributes.h>
+#include <clusters/Groupcast/Commands.h>
+#include <clusters/Groupcast/Events.h>
+#include <clusters/Groupcast/Structs.h>
 #include <clusters/Groups/Attributes.h>
 #include <clusters/Groups/Commands.h>
 #include <clusters/Groups/Events.h>
@@ -247,6 +259,10 @@
 #include <clusters/HepaFilterMonitoring/Commands.h>
 #include <clusters/HepaFilterMonitoring/Events.h>
 #include <clusters/HepaFilterMonitoring/Structs.h>
+#include <clusters/Humidistat/Attributes.h>
+#include <clusters/Humidistat/Commands.h>
+#include <clusters/Humidistat/Events.h>
+#include <clusters/Humidistat/Structs.h>
 #include <clusters/IcdManagement/Attributes.h>
 #include <clusters/IcdManagement/Commands.h>
 #include <clusters/IcdManagement/Events.h>
@@ -327,6 +343,10 @@
 #include <clusters/NetworkCommissioning/Commands.h>
 #include <clusters/NetworkCommissioning/Events.h>
 #include <clusters/NetworkCommissioning/Structs.h>
+#include <clusters/NetworkIdentityManagement/Attributes.h>
+#include <clusters/NetworkIdentityManagement/Commands.h>
+#include <clusters/NetworkIdentityManagement/Events.h>
+#include <clusters/NetworkIdentityManagement/Structs.h>
 #include <clusters/NitrogenDioxideConcentrationMeasurement/Attributes.h>
 #include <clusters/NitrogenDioxideConcentrationMeasurement/Commands.h>
 #include <clusters/NitrogenDioxideConcentrationMeasurement/Events.h>
@@ -395,6 +415,10 @@
 #include <clusters/PressureMeasurement/Commands.h>
 #include <clusters/PressureMeasurement/Events.h>
 #include <clusters/PressureMeasurement/Structs.h>
+#include <clusters/ProximityRanging/Attributes.h>
+#include <clusters/ProximityRanging/Commands.h>
+#include <clusters/ProximityRanging/Events.h>
+#include <clusters/ProximityRanging/Structs.h>
 #include <clusters/ProxyConfiguration/Attributes.h>
 #include <clusters/ProxyConfiguration/Commands.h>
 #include <clusters/ProxyConfiguration/Events.h>
@@ -559,6 +583,10 @@
 #include <clusters/WaterHeaterMode/Commands.h>
 #include <clusters/WaterHeaterMode/Events.h>
 #include <clusters/WaterHeaterMode/Structs.h>
+#include <clusters/WaterTankLevelMonitoring/Attributes.h>
+#include <clusters/WaterTankLevelMonitoring/Commands.h>
+#include <clusters/WaterTankLevelMonitoring/Events.h>
+#include <clusters/WaterTankLevelMonitoring/Structs.h>
 #include <clusters/WebRTCTransportProvider/Attributes.h>
 #include <clusters/WebRTCTransportProvider/Commands.h>
 #include <clusters/WebRTCTransportProvider/Events.h>
@@ -584,7 +612,7 @@
 #include <clusters/ZoneManagement/Events.h>
 #include <clusters/ZoneManagement/Structs.h>
 
-#include <app/common/CompatEnumNames.h>
+#include <app-common/zap-generated/cluster-enums.h>
 
 namespace chip {
 namespace app {
@@ -595,3 +623,8 @@ bool CommandHasLargePayload(ClusterId aCluster, CommandId aCommand);
 
 } // namespace app
 } // namespace chip
+
+// Included at the end, so all our definitions above are available.
+#define CHIP_INCLUDING_FROM_CLUSTER_OBJECTS
+#include <app/common/CompatClusterObjects.h>
+#undef CHIP_INCLUDING_FROM_CLUSTER_OBJECTS

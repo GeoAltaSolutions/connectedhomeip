@@ -17,6 +17,7 @@
 
 #include "thermostat-server.h"
 #include "PresetStructWithOwnedMembers.h"
+#include "thermostat-server-events.h"
 
 #include <app/util/attribute-storage.h>
 
@@ -29,6 +30,7 @@
 #include <app/ConcreteCommandPath.h>
 #include <app/server/Server.h>
 #include <app/util/endpoint-config-api.h>
+#include <clusters/Thermostat/Metadata.h>
 #include <lib/core/CHIPEncoding.h>
 
 using namespace chip;
@@ -392,6 +394,7 @@ Status CheckCoolingSetpointDeadband(bool autoSupported, int16_t newHeatingSetpoi
     return Status::Success;
 }
 
+typedef Status (*SetpointGetter)(EndpointId endpoint, int16_t * value);
 typedef Status (*SetpointSetter)(EndpointId endpoint, int16_t value);
 
 /**
@@ -525,6 +528,19 @@ void SetDefaultDelegate(EndpointId endpoint, Delegate * delegate)
     }
 }
 
+void GenerateSetpointEvent(chip::EndpointId endpoint, SystemModeEnum systemMode, Optional<BitMask<OccupancyBitmap>> occupancy,
+                           SetpointGetter getter)
+{
+    int16_t setpoint;
+    auto status = getter(endpoint, &setpoint);
+    if (status != Status::Success)
+    {
+        ChipLogError(Zcl, "GenerateSetpointEvent failed to queue event: could not get set point");
+        return;
+    }
+    GenerateSetpointChangeEvent(endpoint, systemMode, occupancy, NullOptional, setpoint);
+}
+
 CHIP_ERROR ThermostatAttrAccess::Read(const ConcreteReadAttributePath & aPath, AttributeValueEncoder & aEncoder)
 {
     VerifyOrDie(aPath.mClusterId == Thermostat::Id);
@@ -632,7 +648,22 @@ CHIP_ERROR ThermostatAttrAccess::Read(const ConcreteReadAttributePath & aPath, A
     }
     break;
     case ScheduleTypes::Id: {
-        return aEncoder.EncodeList([](const auto & encoder) -> CHIP_ERROR { return CHIP_NO_ERROR; });
+        auto delegate = GetDelegate(aPath.mEndpointId);
+        VerifyOrReturnError(delegate != nullptr, CHIP_ERROR_INCORRECT_STATE, ChipLogError(Zcl, "Delegate is null"));
+
+        return aEncoder.EncodeList([delegate](const auto & encoder) -> CHIP_ERROR {
+            for (uint8_t i = 0; true; i++)
+            {
+                ScheduleTypeStruct::Type scheduleType;
+                auto err = delegate->GetScheduleTypeAtIndex(i, scheduleType);
+                if (err == CHIP_ERROR_PROVIDER_LIST_EXHAUSTED)
+                {
+                    return CHIP_NO_ERROR;
+                }
+                ReturnErrorOnFailure(err);
+                ReturnErrorOnFailure(encoder.Encode(scheduleType));
+            }
+        });
     }
     break;
     case Schedules::Id: {
@@ -682,6 +713,8 @@ CHIP_ERROR ThermostatAttrAccess::Read(const ConcreteReadAttributePath & aPath, A
         ReturnErrorOnFailure(aEncoder.Encode(delegate->GetThermostatSuggestionNotFollowingReason()));
     }
     break;
+    case ClusterRevision::Id:
+        return aEncoder.Encode(Thermostat::kRevision);
     default: // return CHIP_NO_ERROR and just read from the attribute store in default
         break;
     }
@@ -798,6 +831,92 @@ void ThermostatAttrAccess::OnFabricRemoved(const FabricTable & fabricTable, Fabr
     }
 }
 
+void ThermostatAttrAccess::GenerateEvents(const ConcreteAttributePath & attributePath)
+{
+    switch (attributePath.mAttributeId)
+    {
+    case SystemMode::Id: {
+        SystemModeEnum systemMode = SystemModeEnum::kOff;
+        if (SystemMode::Get(attributePath.mEndpointId, &systemMode) != Status::Success)
+        {
+            ChipLogError(Zcl, "Failed to queue SystemModeChange event: could not get system mode");
+        }
+        else
+        {
+            GenerateSystemModeChangeEvent(attributePath.mEndpointId, NullOptional, systemMode);
+        }
+        break;
+    }
+    case OccupiedHeatingSetpoint::Id:
+        GenerateSetpointEvent(attributePath.mEndpointId, SystemModeEnum::kHeat, MakeOptional(OccupancyBitmap::kOccupied),
+                              OccupiedHeatingSetpoint::Get);
+        break;
+    case OccupiedCoolingSetpoint::Id:
+        GenerateSetpointEvent(attributePath.mEndpointId, SystemModeEnum::kCool, MakeOptional(OccupancyBitmap::kOccupied),
+                              OccupiedCoolingSetpoint::Get);
+        break;
+    case UnoccupiedHeatingSetpoint::Id:
+        GenerateSetpointEvent(attributePath.mEndpointId, SystemModeEnum::kHeat, MakeOptional(BitMask<OccupancyBitmap>(0)),
+                              UnoccupiedHeatingSetpoint::Get);
+
+        break;
+    case UnoccupiedCoolingSetpoint::Id:
+        GenerateSetpointEvent(attributePath.mEndpointId, SystemModeEnum::kCool, MakeOptional(BitMask<OccupancyBitmap>(0)),
+                              UnoccupiedCoolingSetpoint::Get);
+
+        break;
+    case LocalTemperature::Id: {
+        DataModel::Nullable<int16_t> local_temperature;
+        if (LocalTemperature::Get(attributePath.mEndpointId, local_temperature) != Status::Success)
+        {
+            ChipLogError(Zcl, "Failed to queue LocalTemperatureChange event: could not get local temperature");
+        }
+        else
+        {
+            GenerateLocalTemperatureChangeEvent(attributePath.mEndpointId, local_temperature);
+        }
+        break;
+    }
+    case Occupancy::Id: {
+        BitMask<OccupancyBitmap, uint8_t> occupancy;
+        if (Occupancy::Get(attributePath.mEndpointId, &occupancy) != Status::Success)
+        {
+            ChipLogError(Zcl, "Failed to queue OccupancyChange event: could not get occupancy");
+        }
+        else
+        {
+            GenerateOccupancyChangeEvent(attributePath.mEndpointId, chip::Optional<chip::BitMask<OccupancyBitmap>>(), occupancy);
+        }
+        break;
+    }
+    case ThermostatRunningState::Id: {
+        BitMask<RelayStateBitmap> running_state;
+        if (ThermostatRunningState::Get(attributePath.mEndpointId, &running_state) != Status::Success)
+        {
+            ChipLogError(Zcl, "Failed to queue RunningStateChange event: could not get running state");
+        }
+        else
+        {
+            GenerateRunningStateChangeEvent(attributePath.mEndpointId, chip::Optional<chip::BitMask<RelayStateBitmap>>(),
+                                            running_state);
+        }
+        break;
+    }
+    case ThermostatRunningMode::Id: {
+        ThermostatRunningModeEnum running_mode;
+        if (ThermostatRunningMode::Get(attributePath.mEndpointId, &running_mode) != Status::Success)
+        {
+            ChipLogError(Zcl, "Failed to queue RunningModeChange event: could not get running mode");
+        }
+        else
+        {
+            GenerateRunningModeChangeEvent(attributePath.mEndpointId, Optional<ThermostatRunningModeEnum>(), running_mode);
+        }
+        break;
+    }
+    }
+}
+
 void MatterThermostatClusterServerAttributeChangedCallback(const ConcreteAttributePath & attributePath)
 {
     uint32_t flags;
@@ -832,6 +951,10 @@ void MatterThermostatClusterServerAttributeChangedCallback(const ConcreteAttribu
         clearActivePreset = supportsPresets && !occupied;
         EnsureDeadband(attributePath);
         break;
+    }
+    if (featureMap.Has(Feature::kEvents))
+    {
+        gThermostatAttrAccess.GenerateEvents(attributePath);
     }
     if (clearActivePreset)
     {
@@ -1067,7 +1190,7 @@ Status MatterThermostatClusterServerPreAttributeChangedCallback(const app::Concr
         requested = *value;
         if (!AutoSupported)
             return Status::UnsupportedAttribute;
-        if (requested < 0 || requested > 25)
+        if (requested < 0 || requested > 127)
             return Status::InvalidValue;
         return Status::Success;
     }
@@ -1393,12 +1516,12 @@ bool emberAfThermostatClusterSetpointRaiseLowerCallback(app::CommandHandler * co
 
 void MatterThermostatPluginServerInitCallback()
 {
-    Server::GetInstance().GetFabricTable().AddFabricDelegate(&gThermostatAttrAccess);
+    TEMPORARY_RETURN_IGNORED Server::GetInstance().GetFabricTable().AddFabricDelegate(&gThermostatAttrAccess);
     AttributeAccessInterfaceRegistry::Instance().Register(&gThermostatAttrAccess);
 }
 
 void MatterThermostatPluginServerShutdownCallback()
 {
-    Server::GetInstance().GetFabricTable().RemoveFabricDelegate(&gThermostatAttrAccess);
+    TEMPORARY_RETURN_IGNORED Server::GetInstance().GetFabricTable().RemoveFabricDelegate(&gThermostatAttrAccess);
     AttributeAccessInterfaceRegistry::Instance().Unregister(&gThermostatAttrAccess);
 }

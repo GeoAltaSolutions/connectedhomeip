@@ -171,9 +171,7 @@ class ClusterTablesGenerator:
             )
             for e in self.cluster.events if e.fields
         ])
-        cluster_entries.extend(
-            [entry for entry in self.CommandEntries()]
-        )
+        cluster_entries.extend(self.CommandEntries())
 
         yield Table(
             full_name=self.cluster.name,
@@ -241,9 +239,7 @@ class ClusterTablesGenerator:
 def CreateTables(idl: Idl) -> List[Table]:
     result = []
     for cluster in idl.clusters:
-        result.extend(
-            [table for table in ClusterTablesGenerator(cluster).GenerateTables()])
-
+        result.extend(ClusterTablesGenerator(cluster).GenerateTables())
     return result
 
 
@@ -297,7 +293,7 @@ class TLVMetaDataGenerator(CodeGenerator):
         self.internal_render_one_output(
             template_path="TLVMetaData_cpp.jinja",
             output_file_name=f"tlv/meta/{self.table_name}.cpp",
-            vars={
+            template_vars={
                 'clusters': self.idl.clusters,
                 'table_name': self.table_name,
                 'sub_tables': tables,
@@ -307,7 +303,7 @@ class TLVMetaDataGenerator(CodeGenerator):
         self.internal_render_one_output(
             template_path="TLVMetaData_h.jinja",
             output_file_name=f"tlv/meta/{self.table_name}.h",
-            vars={
+            template_vars={
                 'clusters': self.idl.clusters,
                 'table_name': self.table_name,
                 'sub_tables': tables,

@@ -46,25 +46,22 @@
 namespace chip {
 namespace DeviceLayer {
 
-namespace Internal {
-extern CHIP_ERROR InitLwIPCoreLock();
-}
-
 PlatformManagerImpl PlatformManagerImpl::sInstance;
 
+#if !CHIP_CRYPTO_PSA
+// PSA crypto manages entropy internally, so only add entropy source for non-PSA builds
 static int app_entropy_source(void * data, unsigned char * output, size_t len, size_t * olen)
 {
     esp_fill_random(output, len);
     *olen = len;
     return 0;
 }
+#endif // !CHIP_CRYPTO_PSA
 
 CHIP_ERROR PlatformManagerImpl::_InitChipStack()
 {
     // Arrange for CHIP-encapsulated ESP32 errors to be translated to text
     Internal::ESP32Utils::RegisterESP32ErrorFormatter();
-    // Make sure the LwIP core lock has been initialized
-    ReturnErrorOnFailure(Internal::InitLwIPCoreLock());
 
     // Initialize TCP/IP network interface, which internally initializes LwIP stack. We have to
     // call this before the usage of PacketBufferHandle::New() because in case of LwIP-based pool
@@ -77,7 +74,10 @@ CHIP_ERROR PlatformManagerImpl::_InitChipStack()
     VerifyOrReturnError(err == ESP_OK, Internal::ESP32Utils::MapError(err));
 
     mStartTime = System::SystemClock().GetMonotonicTimestamp();
+
+#if !CHIP_CRYPTO_PSA
     ReturnErrorOnFailure(chip::Crypto::add_entropy_source(app_entropy_source, nullptr, 16));
+#endif // !CHIP_CRYPTO_PSA
 
     // Call _InitChipStack() on the generic implementation base class
     // to finish the initialization process.
@@ -92,7 +92,7 @@ void PlatformManagerImpl::_Shutdown()
 
     if (ConfigurationMgr().GetTotalOperationalHours(totalOperationalHours) == CHIP_NO_ERROR)
     {
-        ConfigurationMgr().StoreTotalOperationalHours(totalOperationalHours);
+        LogErrorOnFailure(ConfigurationMgr().StoreTotalOperationalHours(totalOperationalHours));
     }
     else
     {

@@ -71,8 +71,10 @@ Generally regenerate using one of:
 |         96 |       0x60 | OperationalState                                        |
 |         97 |       0x61 | RvcOperationalState                                     |
 |         98 |       0x62 | ScenesManagement                                        |
+|        101 |       0x65 | Groupcast                                               |
 |        113 |       0x71 | HepaFilterMonitoring                                    |
 |        114 |       0x72 | ActivatedCarbonFilterMonitoring                         |
+|        121 |       0x79 | WaterTankLevelMonitoring                                |
 |        128 |       0x80 | BooleanStateConfiguration                               |
 |        129 |       0x81 | ValveConfigurationAndControl                            |
 |        144 |       0x90 | ElectricalPowerMeasurement                              |
@@ -97,8 +99,10 @@ Generally regenerate using one of:
 |        513 |      0x201 | Thermostat                                              |
 |        514 |      0x202 | FanControl                                              |
 |        516 |      0x204 | ThermostatUserInterfaceConfiguration                    |
+|        517 |      0x205 | Humidistat                                              |
 |        768 |      0x300 | ColorControl                                            |
 |        769 |      0x301 | BallastConfiguration                                    |
+|        773 |      0x305 | DynamicLighting                                         |
 |       1024 |      0x400 | IlluminanceMeasurement                                  |
 |       1026 |      0x402 | TemperatureMeasurement                                  |
 |       1027 |      0x403 | PressureMeasurement                                     |
@@ -116,6 +120,9 @@ Generally regenerate using one of:
 |       1070 |      0x42E | TotalVolatileOrganicCompoundsConcentrationMeasurement   |
 |       1071 |      0x42F | RadonConcentrationMeasurement                           |
 |       1072 |      0x430 | SoilMeasurement                                         |
+|       1073 |      0x431 | AmbientContextSensing                                   |
+|       1075 |      0x433 | ProximityRanging                                        |
+|       1104 |      0x450 | NetworkIdentityManagement                               |
 |       1105 |      0x451 | WiFiNetworkManagement                                   |
 |       1106 |      0x452 | ThreadBorderRouterManagement                            |
 |       1107 |      0x453 | ThreadNetworkDirectory                                  |

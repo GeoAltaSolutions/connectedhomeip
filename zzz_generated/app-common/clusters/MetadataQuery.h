@@ -22,6 +22,8 @@
 #include <clusters/AdministratorCommissioning/MetadataProvider.h>
 #include <clusters/AirQuality/Ids.h>
 #include <clusters/AirQuality/MetadataProvider.h>
+#include <clusters/AmbientContextSensing/Ids.h>
+#include <clusters/AmbientContextSensing/MetadataProvider.h>
 #include <clusters/ApplicationBasic/Ids.h>
 #include <clusters/ApplicationBasic/MetadataProvider.h>
 #include <clusters/ApplicationLauncher/Ids.h>
@@ -86,6 +88,8 @@
 #include <clusters/DishwasherMode/MetadataProvider.h>
 #include <clusters/DoorLock/Ids.h>
 #include <clusters/DoorLock/MetadataProvider.h>
+#include <clusters/DynamicLighting/Ids.h>
+#include <clusters/DynamicLighting/MetadataProvider.h>
 #include <clusters/EcosystemInformation/Ids.h>
 #include <clusters/EcosystemInformation/MetadataProvider.h>
 #include <clusters/ElectricalEnergyMeasurement/Ids.h>
@@ -118,10 +122,14 @@
 #include <clusters/GeneralDiagnostics/MetadataProvider.h>
 #include <clusters/GroupKeyManagement/Ids.h>
 #include <clusters/GroupKeyManagement/MetadataProvider.h>
+#include <clusters/Groupcast/Ids.h>
+#include <clusters/Groupcast/MetadataProvider.h>
 #include <clusters/Groups/Ids.h>
 #include <clusters/Groups/MetadataProvider.h>
 #include <clusters/HepaFilterMonitoring/Ids.h>
 #include <clusters/HepaFilterMonitoring/MetadataProvider.h>
+#include <clusters/Humidistat/Ids.h>
+#include <clusters/Humidistat/MetadataProvider.h>
 #include <clusters/IcdManagement/Ids.h>
 #include <clusters/IcdManagement/MetadataProvider.h>
 #include <clusters/Identify/Ids.h>
@@ -162,6 +170,8 @@
 #include <clusters/ModeSelect/MetadataProvider.h>
 #include <clusters/NetworkCommissioning/Ids.h>
 #include <clusters/NetworkCommissioning/MetadataProvider.h>
+#include <clusters/NetworkIdentityManagement/Ids.h>
+#include <clusters/NetworkIdentityManagement/MetadataProvider.h>
 #include <clusters/NitrogenDioxideConcentrationMeasurement/Ids.h>
 #include <clusters/NitrogenDioxideConcentrationMeasurement/MetadataProvider.h>
 #include <clusters/OccupancySensing/Ids.h>
@@ -196,6 +206,8 @@
 #include <clusters/PowerTopology/MetadataProvider.h>
 #include <clusters/PressureMeasurement/Ids.h>
 #include <clusters/PressureMeasurement/MetadataProvider.h>
+#include <clusters/ProximityRanging/Ids.h>
+#include <clusters/ProximityRanging/MetadataProvider.h>
 #include <clusters/ProxyConfiguration/Ids.h>
 #include <clusters/ProxyConfiguration/MetadataProvider.h>
 #include <clusters/ProxyDiscovery/Ids.h>
@@ -278,6 +290,8 @@
 #include <clusters/WaterHeaterManagement/MetadataProvider.h>
 #include <clusters/WaterHeaterMode/Ids.h>
 #include <clusters/WaterHeaterMode/MetadataProvider.h>
+#include <clusters/WaterTankLevelMonitoring/Ids.h>
+#include <clusters/WaterTankLevelMonitoring/MetadataProvider.h>
 #include <clusters/WebRTCTransportProvider/Ids.h>
 #include <clusters/WebRTCTransportProvider/MetadataProvider.h>
 #include <clusters/WebRTCTransportRequestor/Ids.h>
@@ -334,6 +348,11 @@ std::optional<DataModel::AcceptedCommandEntry> AcceptedCommandEntryFor(ClusterId
     {
         if (id == AirQuality::Id)
             return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, AirQuality::Id>::EntryFor(command);
+    }
+    if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == AmbientContextSensing::Id) || ...))
+    {
+        if (id == AmbientContextSensing::Id)
+            return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, AmbientContextSensing::Id>::EntryFor(command);
     }
     if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == ApplicationBasic::Id) || ...))
     {
@@ -498,6 +517,11 @@ std::optional<DataModel::AcceptedCommandEntry> AcceptedCommandEntryFor(ClusterId
         if (id == DoorLock::Id)
             return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, DoorLock::Id>::EntryFor(command);
     }
+    if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == DynamicLighting::Id) || ...))
+    {
+        if (id == DynamicLighting::Id)
+            return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, DynamicLighting::Id>::EntryFor(command);
+    }
     if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == EcosystemInformation::Id) || ...))
     {
         if (id == EcosystemInformation::Id)
@@ -574,6 +598,11 @@ std::optional<DataModel::AcceptedCommandEntry> AcceptedCommandEntryFor(ClusterId
         if (id == GeneralDiagnostics::Id)
             return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, GeneralDiagnostics::Id>::EntryFor(command);
     }
+    if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == Groupcast::Id) || ...))
+    {
+        if (id == Groupcast::Id)
+            return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, Groupcast::Id>::EntryFor(command);
+    }
     if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == GroupKeyManagement::Id) || ...))
     {
         if (id == GroupKeyManagement::Id)
@@ -588,6 +617,11 @@ std::optional<DataModel::AcceptedCommandEntry> AcceptedCommandEntryFor(ClusterId
     {
         if (id == HepaFilterMonitoring::Id)
             return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, HepaFilterMonitoring::Id>::EntryFor(command);
+    }
+    if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == Humidistat::Id) || ...))
+    {
+        if (id == Humidistat::Id)
+            return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, Humidistat::Id>::EntryFor(command);
     }
     if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == IcdManagement::Id) || ...))
     {
@@ -689,6 +723,11 @@ std::optional<DataModel::AcceptedCommandEntry> AcceptedCommandEntryFor(ClusterId
         if (id == NetworkCommissioning::Id)
             return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, NetworkCommissioning::Id>::EntryFor(command);
     }
+    if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == NetworkIdentityManagement::Id) || ...))
+    {
+        if (id == NetworkIdentityManagement::Id)
+            return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, NetworkIdentityManagement::Id>::EntryFor(command);
+    }
     if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == NitrogenDioxideConcentrationMeasurement::Id) || ...))
     {
         if (id == NitrogenDioxideConcentrationMeasurement::Id)
@@ -774,6 +813,11 @@ std::optional<DataModel::AcceptedCommandEntry> AcceptedCommandEntryFor(ClusterId
     {
         if (id == PressureMeasurement::Id)
             return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, PressureMeasurement::Id>::EntryFor(command);
+    }
+    if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == ProximityRanging::Id) || ...))
+    {
+        if (id == ProximityRanging::Id)
+            return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, ProximityRanging::Id>::EntryFor(command);
     }
     if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == ProxyConfiguration::Id) || ...))
     {
@@ -983,6 +1027,11 @@ std::optional<DataModel::AcceptedCommandEntry> AcceptedCommandEntryFor(ClusterId
     {
         if (id == WaterHeaterMode::Id)
             return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, WaterHeaterMode::Id>::EntryFor(command);
+    }
+    if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == WaterTankLevelMonitoring::Id) || ...))
+    {
+        if (id == WaterTankLevelMonitoring::Id)
+            return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, WaterTankLevelMonitoring::Id>::EntryFor(command);
     }
     if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == WebRTCTransportProvider::Id) || ...))
     {
