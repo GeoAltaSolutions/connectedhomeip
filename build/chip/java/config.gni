@@ -32,7 +32,7 @@ declare_args() {
   # set this to false to break that dependency.  The Java-side
   # ChipTLVValueDecoder.java is controlled separately by
   # matter_enable_tlv_decoder_api above.
-  matter_enable_tlv_decoder_cpp = false
+  matter_enable_tlv_decoder_cpp = true
 
   # When non-empty, compile this file instead of the zap-generated
   # CHIPAttributeTLVValueDecoder.cpp.  Used by the casting app to
