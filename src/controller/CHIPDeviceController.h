@@ -47,6 +47,7 @@
 #include <credentials/attestation_verifier/DeviceAttestationDelegate.h>
 #include <credentials/attestation_verifier/DeviceAttestationVerifier.h>
 #include <crypto/CHIPCryptoPAL.h>
+#include <inet/IPAddress.h>
 #include <inet/InetInterface.h>
 #include <lib/core/CHIPConfig.h>
 #include <lib/core/CHIPCore.h>
@@ -233,6 +234,8 @@ public:
 
         return nullptr;
     }
+
+    DeviceTransportMgr * GetTransportMgr() { return mSystemState ? mSystemState->TransportMgr() : nullptr; }
 
     CHIP_ERROR GetPeerAddressAndPort(NodeId peerId, Inet::IPAddress & addr, uint16_t & port);
 
@@ -537,6 +540,8 @@ public:
                           DiscoveryType discoveryType                          = DiscoveryType::kAll,
                           Optional<Dnssd::CommonResolutionData> resolutionData = NullOptional,
                           Optional<SetUpCodePairer::ThreadMeshcopCommissionParameters> meshcopCommissionParams = NullOptional);
+
+    CHIP_ERROR GetLastThreadMeshcopDiscoveryDiagnosticJson(char * buffer, size_t bufferSize);
 
     /**
      * @brief
