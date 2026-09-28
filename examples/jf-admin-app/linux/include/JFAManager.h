@@ -38,7 +38,8 @@ public:
     JFAManager() : mOnConnectedCallback(OnConnected, this), mOnConnectionFailureCallback(OnConnectionFailure, this) {}
 
     CHIP_ERROR Init(Server & server);
-    void HandleCommissioningCompleteEvent();
+    /** @param fabricIndex the fabric whose commissioning completed */
+    void HandleCommissioningCompleteEvent(FabricIndex fabricIndex);
     CHIP_ERROR FinalizeCommissioning(NodeId nodeId, bool isJCM, chip::Crypto::P256PublicKey & trustedIcacPublicKeyB,
                                      uint16_t peerAdminJFAdminClusterEndpointId);
 
@@ -47,6 +48,8 @@ public:
 
     /* app::JointFabricAdministrator::Delegate */
     CHIP_ERROR GetIcacCsr(MutableByteSpan & icacCsr) override;
+    void OnCrossSignedIcacAccepted(FabricIndex fabricIndex, const ByteSpan & icac, NodeId peerAdminNodeId,
+                                   EndpointId peerAdminEndpointId) override;
 
     CHIP_ERROR GetJointFabricMode(uint8_t & jointFabricMode);
 
@@ -60,6 +63,19 @@ private:
     {
         kStandardCommissioningComplete = 0,
         kJCMCommissioning              = 1,
+        // Joining side of JCM: read the joined fabric's IPK from its anchor's datastore
+        kReadJointFabricIpk = 2,
+    };
+
+    /** A joint fabric being joined: AddICAC was accepted, its CommissioningComplete is awaited. */
+    struct PendingJoin
+    {
+        bool active             = false;
+        FabricIndex fabricIndex = kUndefinedFabricIndex;
+        uint8_t icac[Credentials::kMaxCHIPCertLength];
+        size_t icacLen          = 0;
+        NodeId peerNodeId       = kUndefinedNodeId;
+        EndpointId peerEndpoint = kInvalidEndpointId;
     };
 
     friend JFAManager & JFAMgr(void);
@@ -83,11 +99,15 @@ private:
     uint8_t mICACBuffer[Credentials::kMaxDERCertLength];
     size_t mICACBufferLen         = 0;
     bool mCommissionerInitialized = false;
+    PendingJoin mPendingJoin;
 
     void ConnectToNode(ScopedNodeId scopedNodeId, OnConnectedAction onConnectedAction);
     CHIP_ERROR SendCommissioningComplete();
     CHIP_ERROR AnnounceJointFabricAdministrator();
     CHIP_ERROR SendICACSRRequest();
+    CHIP_ERROR SendAddICAC(const ByteSpan & icac);
+    CHIP_ERROR ReadJointFabricIpk();
+    void NotifyJointFabricJoined(const ByteSpan & ipkEpochKey);
 
     static void OnCommissioningCompleteResponse(
         void * context, const app::Clusters::GeneralCommissioning::Commands::CommissioningCompleteResponse::DecodableType & data);
@@ -98,6 +118,14 @@ private:
     OnSendICACSRRequestResponse(void * context,
                                 const app::Clusters::JointFabricAdministrator::Commands::ICACCSRResponse::DecodableType & icaccsr);
     static void OnSendICACSRRequestFailure(void * context, CHIP_ERROR error);
+    static void OnAddICACResponse(void * context,
+                                  const app::Clusters::JointFabricAdministrator::Commands::ICACResponse::DecodableType & response);
+    static void OnAddICACFailure(void * context, CHIP_ERROR error);
+    static void OnGroupKeySetListRead(
+        void * context,
+        const app::DataModel::DecodableList<
+            app::Clusters::JointFabricDatastore::Structs::DatastoreGroupKeySetStruct::DecodableType> & keySets);
+    static void OnGroupKeySetListReadFailure(void * context, CHIP_ERROR error);
 
     void ReleaseSession();
 };

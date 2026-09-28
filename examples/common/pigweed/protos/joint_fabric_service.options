@@ -1,2 +1,5 @@
 OwnershipContext.trustedIcacPublicKeyB max_size:65    // Maximum size of trustedIcacPublicKeyB
 Response.response_bytes max_size:600                  // Maximum size of ICACCSR
+RequestOptions.csr max_size:600                       // Maximum size of the ICAC CSR to cross-sign
+JoinedFabric.cross_signed_icac max_size:400           // Maximum size of a Matter TLV certificate
+JoinedFabric.ipk_epoch_key max_size:16                // An IPK epoch key

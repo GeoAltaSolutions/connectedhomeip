@@ -28,11 +28,29 @@ message OwnershipContext {
 enum TransactionType {
   ICAC_CSR = 0;
   CROSS_SIGNED_ICAC = 1;
+  // JFA was admitted into another ecosystem's joint fabric (JCM, joining side) and holds a cross-signed
+  // ICAC for it. A notification: JFC answers with an empty response and JFA does not wait for it.
+  JOINT_FABRIC_JOINED = 2;
+}
+
+// What JFC needs to act on a joint fabric JFA joined. The fabric's root is not included (it would not fit
+// the 512-byte RPC buffers); JFC reads it from JFA's TrustedRootCertificates attribute.
+message JoinedFabric {
+  uint32 fabric_index = 1;        // JFA's fabric index of the joined fabric
+  uint64 fabric_id = 2;
+  uint32 vendor_id = 3;           // the joined fabric's admin vendor id
+  bytes cross_signed_icac = 4;    // ICAC for JFC's anchor ICA key, signed by the joined fabric's root (Matter TLV)
+  bytes ipk_epoch_key = 5;        // the joined fabric's IPK epoch key 0
+  uint32 admin_cat = 6;           // Administrator CAT of JFA's NOC on the joined fabric
+  uint64 anchor_node_id = 7;      // the joined fabric's anchor administrator (the peer that sent AddICAC)
+  uint32 anchor_endpoint = 8;     // its JointFabricAdministrator cluster endpoint
 }
 
 message RequestOptions {
   TransactionType transaction_type = 1;
   uint64 anchor_fabric_id = 2; // required only for CROSS_SIGNED_ICAC_REQUEST
+  bytes csr = 3;               // CROSS_SIGNED_ICAC: the peer's ICAC CSR (DER) JFC is to cross-sign
+  JoinedFabric joined = 4;     // JOINT_FABRIC_JOINED
 }
 
 message Response {

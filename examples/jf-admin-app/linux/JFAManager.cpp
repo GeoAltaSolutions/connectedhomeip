@@ -29,6 +29,8 @@
 #endif // CHIP_DEVICE_CONFIG_ENABLE_BOTH_COMMISSIONER_AND_COMMISSIONEE
 
 #include <controller/CHIPCluster.h>
+#include <credentials/GroupDataProvider.h>
+#include <lib/core/CASEAuthTag.h>
 #include <lib/support/logging/CHIPLogging.h>
 
 using namespace chip;
@@ -92,8 +94,18 @@ JFARpc * JFAManager::GetJFARpc()
     return mJFARpc;
 }
 
-void JFAManager::HandleCommissioningCompleteEvent()
+void JFAManager::HandleCommissioningCompleteEvent(FabricIndex completedFabricIndex)
 {
+    // Joining side of JCM: the joint fabric's commissioning completed, so it is ours to keep. Fetch its IPK from the
+    // anchor's datastore, then hand the fabric to JFC.
+    if (mPendingJoin.active && mPendingJoin.fabricIndex == completedFabricIndex)
+    {
+        ChipLogProgress(JointFabric, "Joined joint fabric index %u, reading its IPK from the anchor's datastore",
+                        static_cast<unsigned>(completedFabricIndex));
+        ConnectToNode(ScopedNodeId(mPendingJoin.peerNodeId, completedFabricIndex), kReadJointFabricIpk);
+        return;
+    }
+
     for (const auto & fb : mServer->GetFabricTable())
     {
         FabricIndex fabricIndex = fb.GetFabricIndex();
@@ -321,6 +333,14 @@ void JFAManager::OnConnected(void * context, Messaging::ExchangeManager & exchan
         TEMPORARY_RETURN_IGNORED jfaManager->AnnounceJointFabricAdministrator();
         break;
     }
+    case kReadJointFabricIpk: {
+        if (jfaManager->ReadJointFabricIpk() != CHIP_NO_ERROR)
+        {
+            jfaManager->NotifyJointFabricJoined(ByteSpan());
+            jfaManager->ReleaseSession();
+        }
+        break;
+    }
 
     default:
         break;
@@ -335,6 +355,11 @@ void JFAManager::OnConnectionFailure(void * context, const ScopedNodeId & peerId
     ChipLogError(JointFabric, "Failed to establish connection to 0x" ChipLogFormatX64 " on fabric index %d",
                  ChipLogValueX64(peerId.GetNodeId()), peerId.GetFabricIndex());
 
+    if (jfaManager->mOnConnectedAction == kReadJointFabricIpk)
+    {
+        // Still tell JFC about the fabric: without the IPK it cannot act on it, and says so.
+        jfaManager->NotifyJointFabricJoined(ByteSpan());
+    }
     jfaManager->ReleaseSession();
 }
 
@@ -404,7 +429,184 @@ void JFAManager::OnSendICACSRRequestResponse(void * context, const Commands::ICA
         jfaManagerCore->peerAdminICACPubKey.Matches(pubKey))
     {
         ChipLogProgress(JointFabric, "OnSendICACSRRequestResponse: validated ICAC CSR");
-        TEMPORARY_RETURN_IGNORED jfaManagerCore->SendCommissioningComplete();
+
+        // ICAC cross-signing (spec 12.2.5.4): JFC, which holds the anchor root key, signs the peer's ICAC CSR; the
+        // peer gets it through AddICAC. CommissioningComplete follows once the peer accepted it.
+        JFARpc * jfaRpc = jfaManagerCore->GetJFARpc();
+        const FabricInfo * fabric = jfaManagerCore->mServer->GetFabricTable().FindFabricWithIndex(
+            static_cast<FabricIndex>(jfaManagerCore->jfFabricIndex));
+        uint8_t icacBuf[Credentials::kMaxCHIPCertLength];
+        MutableByteSpan icac(icacBuf);
+        if (jfaRpc != nullptr && fabric != nullptr &&
+            jfaRpc->GetCrossSignedICACForJF(icaccsr.icaccsr.Value(), fabric->GetFabricId(), icac) == CHIP_NO_ERROR &&
+            jfaManagerCore->SendAddICAC(icac) == CHIP_NO_ERROR)
+        {
+            return;
+        }
+        ChipLogError(JointFabric, "OnSendICACSRRequestResponse: could not cross-sign the peer's ICAC");
+    }
+    jfaManagerCore->ReleaseSession();
+}
+
+CHIP_ERROR JFAManager::SendAddICAC(const ByteSpan & icac)
+{
+    Commands::AddICAC::Type request;
+
+    if (!mExchangeMgr)
+    {
+        return CHIP_ERROR_UNINITIALIZED;
+    }
+
+    ChipLogProgress(JointFabric, "SendAddICAC: invoke cluster command.");
+    request.ICACValue = icac;
+
+    Controller::ClusterBase cluster(*mExchangeMgr, mSessionHolder.Get().Value(), peerAdminJFAdminClusterEndpointId);
+    return cluster.InvokeCommand(request, this, OnAddICACResponse, OnAddICACFailure);
+}
+
+void JFAManager::OnAddICACResponse(void * context, const Commands::ICACResponse::DecodableType & response)
+{
+    JFAManager * jfaManagerCore = static_cast<JFAManager *>(context);
+    VerifyOrDie(jfaManagerCore != nullptr);
+
+    if (response.statusCode != ICACResponseStatusEnum::kOk)
+    {
+        ChipLogError(JointFabric, "OnAddICACResponse: the peer refused the cross-signed ICAC, status %u",
+                     to_underlying(response.statusCode));
+        jfaManagerCore->ReleaseSession();
+        return;
+    }
+
+    ChipLogProgress(JointFabric, "OnAddICACResponse: cross-signed ICAC accepted");
+    TEMPORARY_RETURN_IGNORED jfaManagerCore->SendCommissioningComplete();
+}
+
+void JFAManager::OnAddICACFailure(void * context, CHIP_ERROR error)
+{
+    JFAManager * jfaManagerCore = static_cast<JFAManager *>(context);
+    VerifyOrDie(jfaManagerCore != nullptr);
+    jfaManagerCore->ReleaseSession();
+
+    ChipLogError(JointFabric, "OnAddICACFailure: %s\n", chip::ErrorStr(error));
+}
+
+void JFAManager::OnCrossSignedIcacAccepted(FabricIndex fabricIndex, const ByteSpan & icac, NodeId peerAdminNodeId,
+                                           EndpointId peerAdminEndpointId)
+{
+    if (icac.size() > sizeof(mPendingJoin.icac))
+    {
+        ChipLogError(JointFabric, "Cross-signed ICAC too large (%u bytes)", static_cast<unsigned>(icac.size()));
+        return;
+    }
+    ChipLogProgress(JointFabric, "Cross-signed ICAC accepted for fabric index %u; awaiting CommissioningComplete",
+                    static_cast<unsigned>(fabricIndex));
+    mPendingJoin.active      = true;
+    mPendingJoin.fabricIndex = fabricIndex;
+    memcpy(mPendingJoin.icac, icac.data(), icac.size());
+    mPendingJoin.icacLen      = icac.size();
+    mPendingJoin.peerNodeId   = peerAdminNodeId;
+    mPendingJoin.peerEndpoint = peerAdminEndpointId;
+}
+
+CHIP_ERROR JFAManager::ReadJointFabricIpk()
+{
+    if (!mExchangeMgr)
+    {
+        return CHIP_ERROR_UNINITIALIZED;
+    }
+
+    ChipLogProgress(JointFabric, "ReadJointFabricIpk: reading the anchor's GroupKeySetList.");
+    // The anchor publishes its IPK epoch key as datastore keyset 0 (readable with Administer, which the Administrator
+    // CAT grants); the reference anchor leaves it empty.
+    Controller::ClusterBase cluster(*mExchangeMgr, mSessionHolder.Get().Value(), mPendingJoin.peerEndpoint);
+    return cluster.ReadAttribute<Clusters::JointFabricDatastore::Attributes::GroupKeySetList::TypeInfo>(
+        this, OnGroupKeySetListRead, OnGroupKeySetListReadFailure);
+}
+
+void JFAManager::OnGroupKeySetListRead(
+    void * context,
+    const DataModel::DecodableList<Clusters::JointFabricDatastore::Structs::DatastoreGroupKeySetStruct::DecodableType> & keySets)
+{
+    JFAManager * jfaManagerCore = static_cast<JFAManager *>(context);
+    VerifyOrDie(jfaManagerCore != nullptr);
+
+    uint8_t ipkBuf[Crypto::CHIP_CRYPTO_SYMMETRIC_KEY_LENGTH_BYTES];
+    ByteSpan ipk;
+    auto it = keySets.begin();
+    while (it.Next())
+    {
+        const auto & keySet = it.GetValue();
+        if (keySet.groupKeySetID == Credentials::GroupDataProvider::kIdentityProtectionKeySetId && !keySet.epochKey0.IsNull() &&
+            keySet.epochKey0.Value().size() == sizeof(ipkBuf))
+        {
+            memcpy(ipkBuf, keySet.epochKey0.Value().data(), sizeof(ipkBuf));
+            ipk = ByteSpan(ipkBuf);
+        }
+    }
+    if (it.GetStatus() != CHIP_NO_ERROR || ipk.empty())
+    {
+        ChipLogError(JointFabric, "The anchor's datastore holds no IPK epoch key");
+    }
+
+    jfaManagerCore->NotifyJointFabricJoined(ipk);
+    jfaManagerCore->ReleaseSession();
+}
+
+void JFAManager::OnGroupKeySetListReadFailure(void * context, CHIP_ERROR error)
+{
+    JFAManager * jfaManagerCore = static_cast<JFAManager *>(context);
+    VerifyOrDie(jfaManagerCore != nullptr);
+
+    ChipLogError(JointFabric, "OnGroupKeySetListReadFailure: %s\n", chip::ErrorStr(error));
+    jfaManagerCore->NotifyJointFabricJoined(ByteSpan());
+    jfaManagerCore->ReleaseSession();
+}
+
+void JFAManager::NotifyJointFabricJoined(const ByteSpan & ipkEpochKey)
+{
+    if (!mPendingJoin.active)
+    {
+        return;
+    }
+    mPendingJoin.active = false;
+
+    const FabricIndex fabricIndex = mPendingJoin.fabricIndex;
+    const FabricInfo * fabric     = mServer->GetFabricTable().FindFabricWithIndex(fabricIndex);
+    if (fabric == nullptr)
+    {
+        ChipLogError(JointFabric, "Joined fabric index %u is gone", static_cast<unsigned>(fabricIndex));
+        return;
+    }
+
+    JoinedFabricInfo joined;
+    joined.fabricIndex     = fabricIndex;
+    joined.fabricId        = fabric->GetFabricId();
+    joined.vendorId        = fabric->GetVendorId();
+    joined.crossSignedIcac = ByteSpan(mPendingJoin.icac, mPendingJoin.icacLen);
+    joined.ipkEpochKey     = ipkEpochKey;
+    joined.anchorNodeId    = mPendingJoin.peerNodeId;
+    joined.anchorEndpoint  = mPendingJoin.peerEndpoint;
+
+    CATValues cats;
+    if (mServer->GetFabricTable().FetchCATs(fabricIndex, cats) == CHIP_NO_ERROR)
+    {
+        for (CASEAuthTag cat : cats.values)
+        {
+            if (cat != kUndefinedCAT && GetCASEAuthTagIdentifier(cat) == kAdminCATIdentifier)
+            {
+                joined.adminCat = cat;
+            }
+        }
+    }
+
+    // Spec 12.2.5 step 9: the joined fabric is now this administrator's joint fabric.
+    (void) app::Clusters::JointFabricAdministrator::Attributes::AdministratorFabricIndex::Set(kJointFabricAdminEndpointId,
+                                                                                            fabricIndex);
+
+    JFARpc * jfaRpc = GetJFARpc();
+    if (jfaRpc == nullptr || jfaRpc->NotifyJointFabricJoined(joined) != CHIP_NO_ERROR)
+    {
+        ChipLogError(JointFabric, "Could not tell JFC about joined fabric index %u", static_cast<unsigned>(fabricIndex));
     }
 }
 

@@ -17,10 +17,16 @@ public:
     ::pw::Status ResponseStream(const ::Response & ResponseBytes, ::pw_protobuf_Empty & response);
 
     /* JFARpc overrides */
-    CHIP_ERROR GetICACCSRForJF(chip::MutableByteSpan & icacCSR);
-    void CloseStreams();
+    CHIP_ERROR GetICACCSRForJF(chip::MutableByteSpan & icacCSR) override;
+    CHIP_ERROR GetCrossSignedICACForJF(const chip::ByteSpan & icacCSR, chip::FabricId anchorFabricId,
+                                       chip::MutableByteSpan & icac) override;
+    CHIP_ERROR NotifyJointFabricJoined(const chip::JoinedFabricInfo & joined) override;
+    void CloseStreams() override;
 
 private:
+    /** Sends a request to JFC over GetStream and waits (up to a second) for its ResponseStream answer. */
+    CHIP_ERROR Request(const ::RequestOptions & requestOptions, chip::MutableByteSpan & out);
+
     struct OwnershipTransferContext
     {
         OwnershipTransferContext(uint64_t nodeId, bool jcm, chip::ByteSpan trustedIcacPublicKeyB,

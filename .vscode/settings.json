@@ -207,5 +207,6 @@
     },
     "files.exclude": {
         "**/examples/**/third_party/connectedhomeip/**": true
-    }
+    },
+    "cmake.sourceDirectory": "E:/Comforter IoT repos/connectedhomeip/src"
 }

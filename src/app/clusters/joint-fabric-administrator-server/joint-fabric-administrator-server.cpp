@@ -379,6 +379,21 @@ void JointFabricAdministratorGlobalInstance::HandleAddICAC(HandlerContext & ctx,
 
     VerifyOrExit(VerifyAddICACDNEncodingRules(commandData) == CHIP_NO_ERROR, status.Emplace(ICACResponseStatusEnum::kInvalidICAC));
 
+    // The ICAC is valid: hand it to the application, which is what can use it (issue NOCs on the joint fabric
+    // under it) - on its own this handler only validated it.
+    {
+        auto & administrator = Server::GetInstance().GetJointFabricAdministrator();
+        if (administrator.GetDelegate() != nullptr)
+        {
+            administrator.GetDelegate()->OnCrossSignedIcacAccepted(ctx.mCommandHandler.GetAccessingFabricIndex(),
+                                                                   commandData.ICACValue,
+                                                                   ctx.mCommandHandler.GetSubjectDescriptor().subject,
+                                                                   administrator.GetPeerJFAdminClusterEndpointId());
+        }
+    }
+    // AddICAC is answered with an ICACResponse (spec 11.25.6.4), OK included.
+    status.Emplace(ICACResponseStatusEnum::kOk);
+
 exit:
     if (status.HasValue())
     {

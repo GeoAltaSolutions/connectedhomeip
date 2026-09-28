@@ -36,7 +36,6 @@
 #include <lib/support/TimeUtils.h>
 #include <platform/internal/DeviceNetworkInfo.h>
 #ifdef JAVA_MATTER_CONTROLLER_TEST
-#include <controller/ExampleOperationalCredentialsIssuer.h>
 #include <controller/ExamplePersistentStorage.h>
 #else
 #include <platform/android/AndroidChipPlatform-JNI.h>
@@ -137,11 +136,10 @@ public:
         return reinterpret_cast<AndroidDeviceControllerWrapper *>(handle);
     }
 
-#ifdef JAVA_MATTER_CONTROLLER_TEST
-    using ExampleOperationalCredentialsIssuerPtr = std::unique_ptr<chip::Controller::ExampleOperationalCredentialsIssuer>;
-#else
+    // Both builds use the Android issuer. It is platform neutral, and it is what bridges NOC chain generation to
+    // ChipDeviceController.NOCChainIssuer; the Linux (JAVA_MATTER_CONTROLLER_TEST) build used to hold the example
+    // issuer instead, which left setNOCChainIssuer() and onNOCChainGeneration() without effect.
     using AndroidOperationalCredentialsIssuerPtr = std::unique_ptr<chip::Controller::AndroidOperationalCredentialsIssuer>;
-#endif
 
     /**
      * Initializes a new CHIPDeviceController using the given parameters, and returns a pointer to the
@@ -180,11 +178,7 @@ public:
                 const chip::CATValues & cats, chip::System::Layer * systemLayer,
                 chip::Inet::EndPointManager<chip::Inet::TCPEndPoint> * tcpEndPointManager,
                 chip::Inet::EndPointManager<chip::Inet::UDPEndPoint> * udpEndPointManager,
-#ifdef JAVA_MATTER_CONTROLLER_TEST
-                ExampleOperationalCredentialsIssuerPtr opCredsIssuer,
-#else
                 AndroidOperationalCredentialsIssuerPtr opCredsIssuer,
-#endif
                 jobject keypairDelegate, jbyteArray rootCertificate, jbyteArray intermediateCertificate,
                 jbyteArray nodeOperationalCertificate, jbyteArray ipkEpochKey, uint16_t listenPort, uint16_t controllerVendorId,
                 uint16_t failsafeTimerSeconds, bool attemptNetworkScanWiFi, bool attemptNetworkScanThread,
@@ -193,11 +187,7 @@ public:
 
     void Shutdown();
 
-#ifdef JAVA_MATTER_CONTROLLER_TEST
-    chip::Controller::ExampleOperationalCredentialsIssuer * GetAndroidOperationalCredentialsIssuer()
-#else
     chip::Controller::AndroidOperationalCredentialsIssuer * GetAndroidOperationalCredentialsIssuer()
-#endif
     {
         return mOpCredsIssuer.get();
     }
@@ -250,11 +240,9 @@ private:
     JavaVM * mJavaVM = nullptr;
     chip::JniGlobalReference mJavaObjectRef;
     CHIPP256KeypairBridge * mKeypairBridge = nullptr;
-#ifdef JAVA_MATTER_CONTROLLER_TEST
-    ExampleOperationalCredentialsIssuerPtr mOpCredsIssuer;
-    PersistentStorage mExampleStorage;
-#else
     AndroidOperationalCredentialsIssuerPtr mOpCredsIssuer;
+#ifdef JAVA_MATTER_CONTROLLER_TEST
+    PersistentStorage mExampleStorage;
 #endif // JAVA_MATTER_CONTROLLER_TEST
 
     // These fields allow us to release the string/byte array memory later.
@@ -300,13 +288,7 @@ private:
     uint16_t mActiveModeThreshold = 0;
     chip::Controller::CommissioningParameters mCommissioningParameter;
     bool mIsInitialized = false;
-    AndroidDeviceControllerWrapper(ChipDeviceControllerPtr controller,
-#ifdef JAVA_MATTER_CONTROLLER_TEST
-                                   ExampleOperationalCredentialsIssuerPtr opCredsIssuer
-#else
-                                   AndroidOperationalCredentialsIssuerPtr opCredsIssuer
-#endif
-                                   ) :
+    AndroidDeviceControllerWrapper(ChipDeviceControllerPtr controller, AndroidOperationalCredentialsIssuerPtr opCredsIssuer) :
         mController(std::move(controller)),
         mOpCredsIssuer(std::move(opCredsIssuer))
     {}

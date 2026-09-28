@@ -63,9 +63,7 @@
 #include <app/dynamic_server/AccessControl.h>
 #endif // CHIP_DEVICE_CONFIG_DYNAMIC_SERVER
 
-#ifdef JAVA_MATTER_CONTROLLER_TEST
-#include <controller/ExampleOperationalCredentialsIssuer.h>
-#else
+#ifndef JAVA_MATTER_CONTROLLER_TEST
 #include <platform/android/AndroidChipPlatform-JNI.h>
 #endif
 
@@ -268,7 +266,8 @@ JNI_METHOD(jlong, onNOCChainGeneration)
         JniByteArray jByteArrayIcac(env, intermediateCertificate);
         JniByteArray jByteArrayNoc(env, operationalCertificate);
 
-#ifndef JAVA_MATTER_CONTROLLER_TEST
+        // Both builds hold the Android issuer, so the chain always reaches the commissioner. The Linux build used
+        // to skip this and still return CHIP_NO_ERROR, leaving commissioning waiting until the fail-safe expired.
         err = wrapper->GetAndroidOperationalCredentialsIssuer()->NOCChainGenerated(
             CHIP_NO_ERROR, jByteArrayNoc.byteSpan(), jByteArrayIcac.byteSpan(), jByteArrayRcac.byteSpan(), ipkOptional,
             adminSubjectOptional);
@@ -278,13 +277,10 @@ JNI_METHOD(jlong, onNOCChainGeneration)
             ChipLogError(Controller, "Failed to SetNocChain for the device: %" CHIP_ERROR_FORMAT, err.Format());
         }
         return static_cast<jlong>(err.AsInteger());
-#endif // JAVA_MATTER_CONTROLLER_TEST
     }
 exit:
-#ifndef JAVA_MATTER_CONTROLLER_TEST
     err = wrapper->GetAndroidOperationalCredentialsIssuer()->NOCChainGenerated(err, ByteSpan(), ByteSpan(), ByteSpan(), ipkOptional,
                                                                                adminSubjectOptional);
-#endif // JAVA_MATTER_CONTROLLER_TEST
     return static_cast<jlong>(err.AsInteger());
 }
 
@@ -408,17 +404,12 @@ JNI_METHOD(jlong, newDeviceController)(JNIEnv * env, jobject self, jobject contr
         err = chip::JniReferences::GetInstance().GetOptionalValue(countryCodeOptional, countryCode);
         SuccessOrExit(err);
 
-#ifdef JAVA_MATTER_CONTROLLER_TEST
-        std::unique_ptr<chip::Controller::ExampleOperationalCredentialsIssuer> opCredsIssuer(
-            new chip::Controller::ExampleOperationalCredentialsIssuer());
-#if CHIP_DEVICE_LAYER_TARGET_LINUX && CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
-    // By default, Linux device is configured as a BLE peripheral while the controller needs a BLE central.
-    SuccessOrExit(chip::DeviceLayer::Internal::BLEMgrImpl().ConfigureBle(0, /* BLE central */ true));
+#if defined(JAVA_MATTER_CONTROLLER_TEST) && CHIP_DEVICE_LAYER_TARGET_LINUX && CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
+        // By default, Linux device is configured as a BLE peripheral while the controller needs a BLE central.
+        SuccessOrExit(chip::DeviceLayer::Internal::BLEMgrImpl().ConfigureBle(0, /* BLE central */ true));
 #endif
-#else
         std::unique_ptr<chip::Controller::AndroidOperationalCredentialsIssuer> opCredsIssuer(
             new chip::Controller::AndroidOperationalCredentialsIssuer());
-#endif
         wrapper = AndroidDeviceControllerWrapper::AllocateNew(
             sJVM, self, kLocalDeviceId, fabricId, chip::kUndefinedCATs, &DeviceLayer::SystemLayer(),
             DeviceLayer::TCPEndPointManager(), DeviceLayer::UDPEndPointManager(), std::move(opCredsIssuer), keypairDelegate,
@@ -997,10 +988,13 @@ JNI_METHOD(void, setUseJavaCallbackForNOCRequest)
     chip::DeviceLayer::StackLock lock;
     AndroidDeviceControllerWrapper * wrapper = AndroidDeviceControllerWrapper::FromJNIHandle(handle);
 
-#ifndef JAVA_MATTER_CONTROLLER_TEST
     wrapper->GetAndroidOperationalCredentialsIssuer()->SetUseJavaCallbackForNOCRequest(useCallback);
-#endif
 
+    // The Linux (JAVA_MATTER_CONTROLLER_TEST) build keeps the full verifier - the configured PAA trust store, the CD
+    // signature and the attestation delegate - whether or not a Java NOC issuer is set: its issuer only issues NOC
+    // chains and validates nothing. Swapping in the PartialDACVerifier would silently skip PAA chain and CD signature
+    // validation.
+#ifndef JAVA_MATTER_CONTROLLER_TEST
     if (useCallback)
     {
         // if we are assigning a callback, then make the device commissioner delegate verification to the
@@ -1013,6 +1007,7 @@ JNI_METHOD(void, setUseJavaCallbackForNOCRequest)
         // if we are setting callback to null, then make the device commissioner use the default verifier
         wrapper->Controller()->SetDeviceAttestationVerifier(GetDeviceAttestationVerifier());
     }
+#endif // JAVA_MATTER_CONTROLLER_TEST
 }
 
 JNI_METHOD(void, updateCommissioningNetworkCredentials)

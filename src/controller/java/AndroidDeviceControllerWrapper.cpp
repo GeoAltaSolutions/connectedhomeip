@@ -77,12 +77,7 @@ void AndroidDeviceControllerWrapper::CallJavaLongMethod(const char * methodName,
 AndroidDeviceControllerWrapper * AndroidDeviceControllerWrapper::AllocateNew(
     JavaVM * vm, jobject deviceControllerObj, chip::NodeId nodeId, chip::FabricId fabricId, const chip::CATValues & cats,
     chip::System::Layer * systemLayer, chip::Inet::EndPointManager<Inet::TCPEndPoint> * tcpEndPointManager,
-    chip::Inet::EndPointManager<Inet::UDPEndPoint> * udpEndPointManager,
-#ifdef JAVA_MATTER_CONTROLLER_TEST
-    ExampleOperationalCredentialsIssuerPtr opCredsIssuerPtr,
-#else
-    AndroidOperationalCredentialsIssuerPtr opCredsIssuerPtr,
-#endif
+    chip::Inet::EndPointManager<Inet::UDPEndPoint> * udpEndPointManager, AndroidOperationalCredentialsIssuerPtr opCredsIssuerPtr,
     jobject keypairDelegate, jbyteArray rootCertificate, jbyteArray intermediateCertificate, jbyteArray nodeOperationalCertificate,
     jbyteArray ipkEpochKey, uint16_t listenPort, uint16_t controllerVendorId, uint16_t failsafeTimerSeconds,
     bool attemptNetworkScanWiFi, bool attemptNetworkScanThread, bool skipCommissioningComplete,
@@ -139,15 +134,13 @@ AndroidDeviceControllerWrapper * AndroidDeviceControllerWrapper::AllocateNew(
         return nullptr;
     }
     chip::PersistentStorageDelegate * wrapperStorage = &wrapper->mExampleStorage;
-    wrapper->SetJavaObjectRef(vm, deviceControllerObj);
-    chip::Controller::ExampleOperationalCredentialsIssuer * opCredsIssuer = wrapper->mOpCredsIssuer.get();
 #else
     chip::PersistentStorageDelegate * wrapperStorage = wrapper.get();
+#endif
 
     wrapper->SetJavaObjectRef(vm, deviceControllerObj);
 
     chip::Controller::AndroidOperationalCredentialsIssuer * opCredsIssuer = wrapper->mOpCredsIssuer.get();
-#endif
 
     // Initialize device attestation verifier
     if (skipAttestationCertificateValidation)
@@ -238,12 +231,8 @@ AndroidDeviceControllerWrapper * AndroidDeviceControllerWrapper::AllocateNew(
         return nullptr;
     }
     initParams.opCertStore = &wrapper->mOpCertStore;
-#ifdef JAVA_MATTER_CONTROLLER_TEST
-    err = opCredsIssuer->Initialize(wrapper->mExampleStorage);
-#else
     // TODO: Init IPK Epoch Key in opcreds issuer, so that commissionees get the right IPK
-    err = opCredsIssuer->Initialize(*wrapper.get(), &wrapper->mAutoCommissioner, wrapper.get()->mJavaObjectRef.ObjectRef());
-#endif
+    err = opCredsIssuer->Initialize(*wrapperStorage, &wrapper->mAutoCommissioner, wrapper.get()->mJavaObjectRef.ObjectRef());
     if (err != CHIP_NO_ERROR)
     {
         *errInfoOnFailure = err;

@@ -4,16 +4,21 @@
 #include <app/server/Server.h>
 #include <lib/support/logging/CHIPLogging.h>
 
+#include <cstring>
+
 using namespace chip;
 
 namespace joint_fabric_service {
 
 constexpr uint32_t kRpcTimeoutMs = 1000;
 std::condition_variable responseCv;
+std::mutex responseMutex;
 bool responseReceived = false;
 
-uint8_t icacCSRBuf[Crypto::kMIN_CSR_Buffer_Size] = { 0 };
-MutableByteSpan icacCSRSpan{ icacCSRBuf };
+// The last ResponseStream payload: an ICAC CSR (DER) or a cross-signed ICAC (Matter TLV). Sized for the
+// largest (Response.response_bytes max_size in joint_fabric_service.options).
+uint8_t responseBuf[600] = { 0 };
+size_t responseLen       = 0;
 
 ::pw::Status JointFabric::TransferOwnership(const ::OwnershipContext & request, ::pw_protobuf_Empty & response)
 {
@@ -28,8 +33,8 @@ MutableByteSpan icacCSRSpan{ icacCSRBuf };
 
     if (request.jcm && request.peerAdminJFAdminClusterEndpointId == kInvalidEndpointId)
     {
-        return pw::Status::OutOfRange();
         ChipLogError(JointFabric, "Invalid Peer Admin Endpoint ID for the JF Administrator Cluster");
+        return pw::Status::OutOfRange();
     }
 
     OwnershipTransferContext * data = Platform::New<OwnershipTransferContext>(
@@ -49,45 +54,91 @@ void JointFabric::GetStream(const ::pw_protobuf_Empty & request, ServerWriter<::
     return;
 }
 
-::pw::Status JointFabric::ResponseStream(const ::Response & ICACCSRBytes, ::pw_protobuf_Empty & response)
+::pw::Status JointFabric::ResponseStream(const ::Response & responseBytes, ::pw_protobuf_Empty & response)
 {
-    ChipLogProgress(JointFabric, "RPC ReplyWithICACCSR");
+    ChipLogProgress(JointFabric, "RPC ResponseStream (%u bytes)", static_cast<unsigned>(responseBytes.response_bytes.size));
 
-    TEMPORARY_RETURN_IGNORED CopySpanToMutableSpan(ByteSpan(ICACCSRBytes.response_bytes.bytes, ICACCSRBytes.response_bytes.size),
-                                                   icacCSRSpan);
-
-    responseReceived = true;
+    {
+        std::lock_guard<std::mutex> lock(responseMutex);
+        if (responseBytes.response_bytes.size > sizeof(responseBuf))
+        {
+            return pw::Status::OutOfRange();
+        }
+        memcpy(responseBuf, responseBytes.response_bytes.bytes, responseBytes.response_bytes.size);
+        responseLen      = responseBytes.response_bytes.size;
+        responseReceived = true;
+    }
     responseCv.notify_one();
 
     return pw::OkStatus();
 }
 
-CHIP_ERROR JointFabric::GetICACCSRForJF(MutableByteSpan & icacCSR)
+CHIP_ERROR JointFabric::Request(const ::RequestOptions & requestOptions, MutableByteSpan & out)
 {
-    std::mutex responseMutex;
     std::unique_lock<std::mutex> lock(responseMutex);
-    ::pw::Status status;
+    responseReceived = false;
 
-    // JFA requests an ICAC CSR from JFC
-    RequestOptions requestOptions{ TransactionType::TransactionType_ICAC_CSR };
-    status = rpcGetStream.Write(requestOptions);
-
-    if (pw::OkStatus() != status)
+    if (pw::OkStatus() != rpcGetStream.Write(requestOptions))
     {
         ChipLogError(JointFabric, "Writing to GetStream failed");
         return CHIP_ERROR_SHUT_DOWN;
     }
 
-    // wait for the ICAC CSR from JFC
-    if (responseCv.wait_for(lock, std::chrono::milliseconds(kRpcTimeoutMs), [] { return responseReceived; }))
+    // wait for JFC's answer
+    if (!responseCv.wait_for(lock, std::chrono::milliseconds(kRpcTimeoutMs), [] { return responseReceived; }))
     {
-        ReturnErrorOnFailure(CopySpanToMutableSpan(ByteSpan(icacCSRSpan.data(), icacCSRSpan.size()), icacCSR));
-        responseReceived = false;
-
-        return CHIP_NO_ERROR;
+        return CHIP_ERROR_TIMEOUT;
     }
+    responseReceived = false;
+    return CopySpanToMutableSpan(ByteSpan(responseBuf, responseLen), out);
+}
 
-    return CHIP_ERROR_TIMEOUT;
+CHIP_ERROR JointFabric::GetICACCSRForJF(MutableByteSpan & icacCSR)
+{
+    // JFA requests an ICAC CSR from JFC
+    ::RequestOptions requestOptions = RequestOptions_init_zero;
+    requestOptions.transaction_type = TransactionType::TransactionType_ICAC_CSR;
+    return Request(requestOptions, icacCSR);
+}
+
+CHIP_ERROR JointFabric::GetCrossSignedICACForJF(const ByteSpan & icacCSR, FabricId anchorFabricId, MutableByteSpan & icac)
+{
+    ::RequestOptions requestOptions = RequestOptions_init_zero;
+    requestOptions.transaction_type = TransactionType::TransactionType_CROSS_SIGNED_ICAC;
+    requestOptions.anchor_fabric_id = anchorFabricId;
+    VerifyOrReturnError(icacCSR.size() <= sizeof(requestOptions.csr.bytes), CHIP_ERROR_BUFFER_TOO_SMALL);
+    memcpy(requestOptions.csr.bytes, icacCSR.data(), icacCSR.size());
+    requestOptions.csr.size = static_cast<pb_size_t>(icacCSR.size());
+    return Request(requestOptions, icac);
+}
+
+CHIP_ERROR JointFabric::NotifyJointFabricJoined(const JoinedFabricInfo & joined)
+{
+    ::RequestOptions requestOptions = RequestOptions_init_zero;
+    requestOptions.transaction_type = TransactionType::TransactionType_JOINT_FABRIC_JOINED;
+    requestOptions.has_joined       = true;
+
+    ::JoinedFabric & info = requestOptions.joined;
+    info.fabric_index     = joined.fabricIndex;
+    info.fabric_id        = joined.fabricId;
+    info.vendor_id        = to_underlying(joined.vendorId);
+    info.admin_cat        = joined.adminCat;
+    info.anchor_node_id   = joined.anchorNodeId;
+    info.anchor_endpoint  = joined.anchorEndpoint;
+    VerifyOrReturnError(joined.crossSignedIcac.size() <= sizeof(info.cross_signed_icac.bytes), CHIP_ERROR_BUFFER_TOO_SMALL);
+    memcpy(info.cross_signed_icac.bytes, joined.crossSignedIcac.data(), joined.crossSignedIcac.size());
+    info.cross_signed_icac.size = static_cast<pb_size_t>(joined.crossSignedIcac.size());
+    VerifyOrReturnError(joined.ipkEpochKey.size() <= sizeof(info.ipk_epoch_key.bytes), CHIP_ERROR_BUFFER_TOO_SMALL);
+    memcpy(info.ipk_epoch_key.bytes, joined.ipkEpochKey.data(), joined.ipkEpochKey.size());
+    info.ipk_epoch_key.size = static_cast<pb_size_t>(joined.ipkEpochKey.size());
+
+    // A notification: JFC answers with an empty ResponseStream, which is not waited for.
+    if (pw::OkStatus() != rpcGetStream.Write(requestOptions))
+    {
+        ChipLogError(JointFabric, "Writing the joined fabric to GetStream failed");
+        return CHIP_ERROR_SHUT_DOWN;
+    }
+    return CHIP_NO_ERROR;
 }
 
 void JointFabric::CloseStreams()

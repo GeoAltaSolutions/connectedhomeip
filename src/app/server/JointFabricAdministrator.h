@@ -38,6 +38,20 @@ public:
         virtual ~Delegate() {}
 
         virtual CHIP_ERROR GetIcacCsr(MutableByteSpan & icacCsr) { return CHIP_NO_ERROR; }
+
+        /**
+         * Called when AddICAC accepted a cross-signed ICAC from the anchor of the accessing fabric (JCM, joining
+         * side): the ICAC chains to that fabric's root and certifies this node's ICAC CSR key.
+         *
+         * @param fabricIndex         the accessing (joint) fabric
+         * @param icac                the cross-signed ICAC, Matter TLV; only valid during the call
+         * @param peerAdminNodeId     the node that invoked AddICAC, the joint fabric's anchor administrator
+         * @param peerAdminEndpointId the endpoint of its JointFabricAdministrator cluster, from
+         *                            AnnounceJointFabricAdministrator
+         */
+        virtual void OnCrossSignedIcacAccepted(FabricIndex fabricIndex, const ByteSpan & icac, NodeId peerAdminNodeId,
+                                               EndpointId peerAdminEndpointId)
+        {}
     };
 
     static JointFabricAdministrator & GetInstance()
