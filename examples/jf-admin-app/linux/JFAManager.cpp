@@ -658,6 +658,8 @@ void JFAManager::OnCommissioningCompleteResponse(
             ChipLogProgress(JointFabric, "Joint Commissioning Method (nodeId=%ld) success", jfaManager->mNodeId);
             break;
         }
+        default:
+            break;
         }
     }
 
