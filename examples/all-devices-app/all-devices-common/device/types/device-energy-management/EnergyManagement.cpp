@@ -110,8 +110,8 @@ Protocols::InteractionModel::Status EnergyManagement::CancelRequest()
     return Protocols::InteractionModel::Status::Success;
 }
 
-Protocols::InteractionModel::Status EnergyManagement::PowerRangeAdjustRequest(const DataModel::Nullable<int64_t> minPower,
-                                                                              const DataModel::Nullable<int64_t> maxPower,
+Protocols::InteractionModel::Status EnergyManagement::PowerRangeAdjustRequest(const Optional<int64_t> minPower,
+                                                                              const Optional<int64_t> maxPower,
                                                                               const uint32_t duration, AdjustmentCauseEnum cause)
 {
     return Protocols::InteractionModel::Status::Success;
@@ -173,7 +173,7 @@ CHIP_ERROR EnergyManagement::SetESAState(ESAStateEnum state)
     mESAState = state;
 
     VerifyOrReturnValue(mProvider != nullptr, CHIP_NO_ERROR);
-    mProvider->NotifyAttributeChanged({ SingleEndpoint::GetEndpointId(), Id, Attributes::ESAState::Id },
+    mProvider->NotifyAttributeChanged({ GetEndpointId(), Id, Attributes::ESAState::Id },
                                       DataModel::AttributeChangeType::kReportable);
 
     return CHIP_NO_ERROR;

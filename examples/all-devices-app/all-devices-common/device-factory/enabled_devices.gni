@@ -75,6 +75,18 @@ _available_devices = [
     "CHIME",
   ],
   [
+    "closure",
+    "CLOSURE",
+  ],
+  [
+    "color-temperature-light",
+    "COLOR_TEMPERATURE_LIGHT",
+  ],
+  [
+    "commissioning-proxy",
+    "COMMISSIONING_PROXY",
+  ],
+  [
     "contact-sensor",
     "CONTACT_SENSOR",
   ],
@@ -103,6 +115,10 @@ _available_devices = [
     "ELECTRICAL_SENSOR",
   ],
   [
+    "extended-color-light",
+    "EXTENDED_COLOR_LIGHT",
+  ],
+  [
     "extractor-hood",
     "EXTRACTOR_HOOD",
   ],
@@ -117,6 +133,10 @@ _available_devices = [
   [
     "generic-switch",
     "GENERIC_SWITCH",
+  ],
+  [
+    "humidity-conditioner",
+    "HUMIDITY_CONDITIONER",
   ],
   [
     "humidity-sensor",
@@ -137,6 +157,10 @@ _available_devices = [
   [
     "microwave-oven",
     "MICROWAVE_OVEN",
+  ],
+  [
+    "mode-select",
+    "MODE_SELECT",
   ],
   [
     "mounted-dimmable-load-control",
@@ -195,6 +219,10 @@ _available_devices = [
     "ROBOTIC_VACUUM_CLEANER",
   ],
   [
+    "room-air-conditioner",
+    "ROOM_AIR_CONDITIONER",
+  ],
+  [
     "smoke-co-alarm",
     "SMOKE_CO_ALARM",
   ],
@@ -209,6 +237,10 @@ _available_devices = [
   [
     "temperature-sensor",
     "TEMPERATURE_SENSOR",
+  ],
+  [
+    "thread-border-router",
+    "THREAD_BORDER_ROUTER",
   ],
   [
     "water-freeze-detector",
